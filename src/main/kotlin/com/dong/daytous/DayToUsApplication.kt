@@ -1,4 +1,4 @@
-package com.dong.day_to_us
+package com.dong.daytous
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class DayToUsApplication
 
 fun main(args: Array<String>) {
-	runApplication<DayToUsApplication>(*args)
+    runApplication<DayToUsApplication>(*args)
 }
