@@ -1,6 +1,8 @@
 package com.dong.daytous.dto
 
+import java.util.UUID
+
 data class SharedSpaceResponse(
-    val id: Long,
+    val id: UUID,
     val name: String
 )
