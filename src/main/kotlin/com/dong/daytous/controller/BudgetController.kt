@@ -2,6 +2,7 @@ package com.dong.daytous.controller
 
 import com.dong.daytous.dto.BudgetEntryRequest
 import com.dong.daytous.dto.BudgetEntryResponse
+import com.dong.daytous.dto.toResponse
 import com.dong.daytous.service.BudgetService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -24,9 +25,7 @@ class BudgetController(
     fun getBudgetEntriesForSpace(
         @PathVariable spaceId: UUID,
     ): List<BudgetEntryResponse> =
-        budgetService.getAllBudgetEntriesForSpace(spaceId).map { entry ->
-            BudgetEntryResponse(entry.id!!, entry.description, entry.amount)
-        }
+        budgetService.getAllBudgetEntriesForSpace(spaceId).map { it.toResponse() }
 
     @GetMapping("/{entryId}")
     fun getBudgetEntryById(
@@ -34,7 +33,7 @@ class BudgetController(
         @PathVariable entryId: UUID,
     ): ResponseEntity<BudgetEntryResponse> {
         val entry = budgetService.getBudgetEntryById(spaceId, entryId)
-        return ResponseEntity.ok(BudgetEntryResponse(entry.id!!, entry.description, entry.amount))
+        return ResponseEntity.ok(entry.toResponse())
     }
 
     @PostMapping
@@ -45,7 +44,7 @@ class BudgetController(
         val createdEntry = budgetService.createBudgetEntry(spaceId, request)
         return ResponseEntity
             .status(HttpStatus.CREATED)
-            .body(BudgetEntryResponse(createdEntry.id!!, createdEntry.description, createdEntry.amount))
+            .body(createdEntry.toResponse())
     }
 
     @PutMapping("/{entryId}")
@@ -55,7 +54,7 @@ class BudgetController(
         @RequestBody request: BudgetEntryRequest,
     ): ResponseEntity<BudgetEntryResponse> {
         val updatedEntry = budgetService.updateBudgetEntry(spaceId, entryId, request)
-        return ResponseEntity.ok(BudgetEntryResponse(updatedEntry.id!!, updatedEntry.description, updatedEntry.amount))
+        return ResponseEntity.ok(updatedEntry.toResponse())
     }
 
     @DeleteMapping("/{entryId}")
