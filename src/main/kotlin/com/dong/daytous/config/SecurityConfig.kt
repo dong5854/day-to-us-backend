@@ -16,32 +16,32 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 class SecurityConfig(
     private val customOAuth2UserService: CustomOAuth2UserService,
     private val oAuth2AuthenticationSuccessHandler: OAuth2AuthenticationSuccessHandler,
-    private val jwtAuthenticationFilter: JwtAuthenticationFilter
+    private val jwtAuthenticationFilter: JwtAuthenticationFilter,
 ) {
-
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
+            .cors { }
             .csrf { it.disable() }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers(
-                    "/",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/oauth2/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            }
-            .oauth2Login { oauth2Login ->
+                it
+                    .requestMatchers(
+                        "/",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/oauth2/**",
+                    ).permitAll()
+                    .anyRequest()
+                    .authenticated()
+            }.oauth2Login { oauth2Login ->
                 oauth2Login.userInfoEndpoint { userInfoEndpoint ->
                     userInfoEndpoint.userService(customOAuth2UserService)
                 }
                 oauth2Login.successHandler(oAuth2AuthenticationSuccessHandler)
-            }
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+            }.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()
     }

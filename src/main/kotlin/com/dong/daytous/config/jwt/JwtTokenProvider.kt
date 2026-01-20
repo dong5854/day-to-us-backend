@@ -41,7 +41,6 @@ class JwtTokenProvider(
         val role = claims["role"] as String
         val authorities = listOf(SimpleGrantedAuthority(role))
 
-        // Spring Security의 UserDetails를 직접 사용하지 않고, principal로 email을 사용
         return UsernamePasswordAuthenticationToken(email, null, authorities)
     }
 
@@ -50,7 +49,6 @@ class JwtTokenProvider(
             getClaims(token)
             true
         } catch (e: Exception) {
-            // MalformedJwtException, ExpiredJwtException, etc.
             false
         }
     }

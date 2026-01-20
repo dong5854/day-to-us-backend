@@ -10,7 +10,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "users") // "user"는 PostgreSQL의 예약어일 수 있으므로 "users" 사용
+@Table(name = "users")
 class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,8 +26,8 @@ class User(
     @Column(nullable = false)
     var role: Role,
 
-    var provider: String, // e.g., "google"
-    var providerId: String, // Google-specific user ID
+    var provider: String,
+    var providerId: String,
 )
 
 enum class Role {
