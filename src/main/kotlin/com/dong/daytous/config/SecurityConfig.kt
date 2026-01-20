@@ -5,6 +5,7 @@ import com.dong.daytous.config.jwt.OAuth2AuthenticationSuccessHandler
 import com.dong.daytous.service.CustomOAuth2UserService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -41,6 +42,11 @@ class SecurityConfig(
                     userInfoEndpoint.userService(customOAuth2UserService)
                 }
                 oauth2Login.successHandler(oAuth2AuthenticationSuccessHandler)
+            }.exceptionHandling {
+                it.authenticationEntryPoint(
+                    org.springframework.security.web.authentication
+                        .HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                )
             }.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()

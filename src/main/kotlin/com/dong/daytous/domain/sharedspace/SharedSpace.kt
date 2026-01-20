@@ -1,6 +1,7 @@
 package com.dong.daytous.domain.sharedspace
 
 import com.dong.daytous.domain.budget.BudgetEntry
+import com.dong.daytous.domain.user.User
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -16,8 +17,15 @@ import java.util.UUID
 class SharedSpace(
     @Column(nullable = false)
     val name: String,
+
+    @Column(nullable = false, unique = true)
+    val inviteCode: String = UUID.randomUUID().toString().substring(0, 8), // 간단한 초대 코드 생성
+
     @OneToMany(mappedBy = "sharedSpace", cascade = [CascadeType.ALL], orphanRemoval = true)
     val budgetEntries: MutableList<BudgetEntry> = mutableListOf(),
+
+    @OneToMany(mappedBy = "sharedSpace")
+    val users: MutableList<User> = mutableListOf(),
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
@@ -31,5 +39,5 @@ class SharedSpace(
 
     override fun hashCode(): Int = Objects.hash(id)
 
-    override fun toString(): String = "SharedSpace(id=$id, name='$name')"
+    override fun toString(): String = "SharedSpace(id=$id, name='$name', inviteCode='$inviteCode')"
 }

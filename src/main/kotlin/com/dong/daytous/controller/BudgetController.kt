@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.security.Principal
 import java.util.UUID
 
 @RestController
@@ -24,15 +25,17 @@ class BudgetController(
     @GetMapping
     fun getBudgetEntriesForSpace(
         @PathVariable spaceId: UUID,
+        principal: Principal,
     ): List<BudgetEntryResponse> =
-        budgetService.getAllBudgetEntriesForSpace(spaceId).map { it.toResponse() }
+        budgetService.getAllBudgetEntriesForSpace(spaceId, principal.name).map { it.toResponse() }
 
     @GetMapping("/{entryId}")
     fun getBudgetEntryById(
         @PathVariable spaceId: UUID,
         @PathVariable entryId: UUID,
+        principal: Principal,
     ): ResponseEntity<BudgetEntryResponse> {
-        val entry = budgetService.getBudgetEntryById(spaceId, entryId)
+        val entry = budgetService.getBudgetEntryById(spaceId, entryId, principal.name)
         return ResponseEntity.ok(entry.toResponse())
     }
 
@@ -40,8 +43,9 @@ class BudgetController(
     fun createBudgetEntry(
         @PathVariable spaceId: UUID,
         @RequestBody request: BudgetEntryRequest,
+        principal: Principal,
     ): ResponseEntity<BudgetEntryResponse> {
-        val createdEntry = budgetService.createBudgetEntry(spaceId, request)
+        val createdEntry = budgetService.createBudgetEntry(spaceId, request, principal.name)
         return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(createdEntry.toResponse())
@@ -52,8 +56,9 @@ class BudgetController(
         @PathVariable spaceId: UUID,
         @PathVariable entryId: UUID,
         @RequestBody request: BudgetEntryRequest,
+        principal: Principal,
     ): ResponseEntity<BudgetEntryResponse> {
-        val updatedEntry = budgetService.updateBudgetEntry(spaceId, entryId, request)
+        val updatedEntry = budgetService.updateBudgetEntry(spaceId, entryId, request, principal.name)
         return ResponseEntity.ok(updatedEntry.toResponse())
     }
 
@@ -61,8 +66,9 @@ class BudgetController(
     fun deleteBudgetEntry(
         @PathVariable spaceId: UUID,
         @PathVariable entryId: UUID,
+        principal: Principal,
     ): ResponseEntity<Void> {
-        budgetService.deleteBudgetEntry(spaceId, entryId)
+        budgetService.deleteBudgetEntry(spaceId, entryId, principal.name)
         return ResponseEntity.noContent().build()
     }
 }
