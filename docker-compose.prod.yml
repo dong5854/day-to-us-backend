@@ -1,0 +1,43 @@
+services:
+  app:
+    image: dong5854/day-to-us-backend:latest
+    container_name: day-to-us-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PROD_DB_URL=jdbc:postgresql://db:5432/daytous
+      - PROD_DB_USERNAME=${POSTGRES_USER}
+      - PROD_DB_PASSWORD=${POSTGRES_PASSWORD}
+      - PROD_DDL_AUTO=${PROD_DDL_AUTO}
+      - PROD_CORS_ALLOWED_ORIGINS=${PROD_CORS_ALLOWED_ORIGINS}
+      - PROD_OAUTH_REDIRECT_URI=${PROD_OAUTH_REDIRECT_URI}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_EXPIRATION_TIME=${JWT_EXPIRATION_TIME}
+    depends_on:
+      - db
+    networks:
+      - day-to-us-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: day-to-us-db
+    restart: always
+    environment:
+      - POSTGRES_DB=daytous
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - day-to-us-network
+
+volumes:
+  postgres_data:
+
+networks:
+  day-to-us-network:
+    driver: bridge
