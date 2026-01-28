@@ -6,4 +6,5 @@ data class BudgetEntryResponse(
     val id: UUID,
     val description: String,
     val amount: Double,
+    val fixedExpenseId: UUID?
 )

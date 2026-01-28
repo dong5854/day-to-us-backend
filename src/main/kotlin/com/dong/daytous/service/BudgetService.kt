@@ -56,6 +56,7 @@ class BudgetService(
                 description = request.description,
                 amount = request.amount,
                 sharedSpace = sharedSpace,
+                fixedExpenseId = request.fixedExpenseId,
             )
         return budgetEntryRepository.save(newEntry)
     }
@@ -67,13 +68,12 @@ class BudgetService(
         request: BudgetEntryRequest,
         email: String,
     ): BudgetEntry {
-        // getBudgetEntryById 내부에서 checkAccess를 호출하므로 중복 호출 방지를 위해 여기서는 생략 가능하지만,
-        // 명시적으로 호출하거나 getBudgetEntryById를 호출하는 것이 안전함.
         val existingEntry = getBudgetEntryById(spaceId, entryId, email)
         val updatedEntry =
             existingEntry.copy(
                 description = request.description,
                 amount = request.amount,
+                fixedExpenseId = request.fixedExpenseId,
             )
         return budgetEntryRepository.save(updatedEntry)
     }

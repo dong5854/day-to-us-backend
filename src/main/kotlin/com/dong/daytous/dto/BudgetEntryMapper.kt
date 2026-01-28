@@ -7,4 +7,5 @@ fun BudgetEntry.toResponse(): BudgetEntryResponse =
         id = this.id ?: throw IllegalStateException("BudgetEntry ID cannot be null"),
         description = this.description,
         amount = this.amount,
+        fixedExpenseId = this.fixedExpenseId
     )

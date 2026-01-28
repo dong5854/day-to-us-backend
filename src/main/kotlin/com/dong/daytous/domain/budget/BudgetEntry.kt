@@ -1,6 +1,7 @@
 package com.dong.daytous.domain.budget
 
 import com.dong.daytous.domain.sharedspace.SharedSpace
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
@@ -18,6 +19,9 @@ data class BudgetEntry(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shared_space_id")
     var sharedSpace: SharedSpace? = null,
+
+    @Column(name = "fixed_expense_id")
+    val fixedExpenseId: UUID? = null, // 고정 지출 ID (nullable)
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
