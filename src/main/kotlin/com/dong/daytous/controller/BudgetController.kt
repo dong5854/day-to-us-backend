@@ -2,6 +2,7 @@ package com.dong.daytous.controller
 
 import com.dong.daytous.dto.BudgetEntryRequest
 import com.dong.daytous.dto.BudgetEntryResponse
+import com.dong.daytous.dto.toResponse
 import com.dong.daytous.service.BudgetService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -11,59 +12,63 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.security.Principal
+import java.util.UUID
 
 @RestController
+@RequestMapping("/shared-spaces/{spaceId}/budget-entries")
 class BudgetController(
     private val budgetService: BudgetService,
 ) {
-    @GetMapping("/budget-entries")
-    fun getBudgetEntries(): List<BudgetEntryResponse> =
-        budgetService.getAllBudgetEntries().map { entry ->
-            BudgetEntryResponse(entry.id, entry.description, entry.amount)
-        }
+    @GetMapping
+    fun getBudgetEntriesForSpace(
+        @PathVariable spaceId: UUID,
+        principal: Principal,
+    ): List<BudgetEntryResponse> =
+        budgetService.getAllBudgetEntriesForSpace(spaceId, principal.name).map { it.toResponse() }
 
-    @GetMapping("/budget-entries/{id}")
+    @GetMapping("/{entryId}")
     fun getBudgetEntryById(
-        @PathVariable id: Long,
+        @PathVariable spaceId: UUID,
+        @PathVariable entryId: UUID,
+        principal: Principal,
     ): ResponseEntity<BudgetEntryResponse> {
-        val entry = budgetService.getBudgetEntryById(id)
-        return entry?.let {
-            ResponseEntity.ok(BudgetEntryResponse(it.id, it.description, it.amount))
-        } ?: ResponseEntity.notFound().build()
+        val entry = budgetService.getBudgetEntryById(spaceId, entryId, principal.name)
+        return ResponseEntity.ok(entry.toResponse())
     }
 
-    @PostMapping("/budget-entries")
+    @PostMapping
     fun createBudgetEntry(
+        @PathVariable spaceId: UUID,
         @RequestBody request: BudgetEntryRequest,
+        principal: Principal,
     ): ResponseEntity<BudgetEntryResponse> {
-        val createdEntry = budgetService.createBudgetEntry(request)
+        val createdEntry = budgetService.createBudgetEntry(spaceId, request, principal.name)
         return ResponseEntity
             .status(HttpStatus.CREATED)
-            .body(BudgetEntryResponse(createdEntry.id, createdEntry.description, createdEntry.amount))
+            .body(createdEntry.toResponse())
     }
 
-    @PutMapping("/budget-entries/{id}")
+    @PutMapping("/{entryId}")
     fun updateBudgetEntry(
-        @PathVariable id: Long,
+        @PathVariable spaceId: UUID,
+        @PathVariable entryId: UUID,
         @RequestBody request: BudgetEntryRequest,
+        principal: Principal,
     ): ResponseEntity<BudgetEntryResponse> {
-        val updatedEntry = budgetService.updateBudgetEntry(id, request)
-        return updatedEntry?.let {
-            ResponseEntity.ok(BudgetEntryResponse(it.id, it.description, it.amount))
-        } ?: ResponseEntity.notFound().build()
+        val updatedEntry = budgetService.updateBudgetEntry(spaceId, entryId, request, principal.name)
+        return ResponseEntity.ok(updatedEntry.toResponse())
     }
 
-    @DeleteMapping("/budget-entries/{id}")
+    @DeleteMapping("/{entryId}")
     fun deleteBudgetEntry(
-        @PathVariable id: Long,
+        @PathVariable spaceId: UUID,
+        @PathVariable entryId: UUID,
+        principal: Principal,
     ): ResponseEntity<Void> {
-        val entry = budgetService.getBudgetEntryById(id)
-        return if (entry != null) {
-            budgetService.deleteBudgetEntry(id)
-            ResponseEntity.noContent().build()
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        budgetService.deleteBudgetEntry(spaceId, entryId, principal.name)
+        return ResponseEntity.noContent().build()
     }
 }
