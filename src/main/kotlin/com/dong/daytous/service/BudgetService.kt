@@ -55,6 +55,7 @@ class BudgetService(
             BudgetEntry(
                 description = request.description,
                 amount = request.amount,
+                date = request.date,
                 sharedSpace = sharedSpace,
                 fixedExpenseId = request.fixedExpenseId,
             )
@@ -73,6 +74,7 @@ class BudgetService(
             existingEntry.copy(
                 description = request.description,
                 amount = request.amount,
+                date = request.date,
                 fixedExpenseId = request.fixedExpenseId,
             )
         return budgetEntryRepository.save(updatedEntry)
