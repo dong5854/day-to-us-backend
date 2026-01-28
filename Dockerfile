@@ -1,5 +1,5 @@
-# 1. Base Image (Java 21)
-FROM openjdk:21-jdk-slim
+# 1. Base Image (Eclipse Temurin Java 21)
+FROM eclipse-temurin:21-jdk-alpine
 
 # 2. Argument for JAR file path
 ARG JAR_FILE=build/libs/*.jar
