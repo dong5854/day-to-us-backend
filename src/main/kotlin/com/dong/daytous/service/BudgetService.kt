@@ -20,9 +20,19 @@ class BudgetService(
     @Transactional(readOnly = true)
     fun getAllBudgetEntriesForSpace(
         spaceId: UUID,
+        year: Int?,
+        month: Int?,
         email: String,
     ): List<BudgetEntry> {
         checkAccess(spaceId, email)
+
+        if (year != null && month != null) {
+            val yearMonth = java.time.YearMonth.of(year, month)
+            val startDate = yearMonth.atDay(1)
+            val endDate = yearMonth.atEndOfMonth()
+            return budgetEntryRepository.findBySharedSpaceIdAndDateBetween(spaceId, startDate, endDate)
+        }
+
         return budgetEntryRepository.findBySharedSpaceId(spaceId)
     }
 
