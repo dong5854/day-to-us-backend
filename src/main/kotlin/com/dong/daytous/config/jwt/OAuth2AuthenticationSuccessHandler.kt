@@ -46,5 +46,6 @@ class OAuth2AuthenticationSuccessHandler(
             .fromUriString(redirectUri)
             .queryParam("token", token)
             .build()
+            .encode()
             .toUriString()
 }

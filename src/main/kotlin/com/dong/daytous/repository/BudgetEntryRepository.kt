@@ -8,4 +8,10 @@ import java.util.UUID
 @Repository
 interface BudgetEntryRepository : JpaRepository<BudgetEntry, UUID> {
     fun findBySharedSpaceId(spaceId: UUID): List<BudgetEntry>
+
+    fun findBySharedSpaceIdAndDateBetween(
+        spaceId: UUID,
+        startDate: java.time.LocalDate,
+        endDate: java.time.LocalDate,
+    ): List<BudgetEntry>
 }
