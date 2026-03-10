@@ -10,5 +10,6 @@ data class ScheduleResponse(
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
     val isAllDay: Boolean,
-    val createdBy: Long
+    val createdBy: Long,
+    val syncStatus: String,
 )

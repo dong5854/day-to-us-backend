@@ -10,6 +10,7 @@ fun Schedule.toResponse(): ScheduleResponse {
         startDateTime = this.startDateTime,
         endDateTime = this.endDateTime,
         isAllDay = this.isAllDay,
-        createdBy = this.createdBy
+        createdBy = this.createdBy,
+        syncStatus = this.syncStatus.name,
     )
 }

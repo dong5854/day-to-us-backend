@@ -17,4 +17,12 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     
     // 단순히 공간의 모든 일정 조회 (필요 시 사용)
     fun findBySharedSpaceIdOrderByStartDateTime(sharedSpaceId: UUID): List<Schedule>
+
+    fun findByGoogleEventId(googleEventId: String): Schedule?
+
+    fun findBySharedSpaceIdAndGoogleEventIdIn(sharedSpaceId: UUID, googleEventIds: List<String>): List<Schedule>
+
+    fun findBySharedSpaceIdAndSyncStatus(sharedSpaceId: UUID, syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
+
+    fun findBySyncStatus(syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
 }
