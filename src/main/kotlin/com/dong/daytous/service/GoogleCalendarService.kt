@@ -131,12 +131,10 @@ class GoogleCalendarService(
         val zoneId = ZoneId.systemDefault()
 
         if (schedule.isAllDay) {
-            val startDate = com.google.api.client.util.DateTime(true,
-                ZonedDateTime.of(schedule.startDateTime, zoneId).toInstant().toEpochMilli(), null)
-            val endDate = com.google.api.client.util.DateTime(true,
-                ZonedDateTime.of(schedule.endDateTime, zoneId).toInstant().toEpochMilli(), null)
-            event.start = EventDateTime().setDate(startDate)
-            event.end = EventDateTime().setDate(endDate)
+            val startStr = schedule.startDateTime.toLocalDate().toString()
+            val endStr = schedule.endDateTime.toLocalDate().plusDays(1).toString()
+            event.start = EventDateTime().setDate(com.google.api.client.util.DateTime(startStr))
+            event.end = EventDateTime().setDate(com.google.api.client.util.DateTime(endStr))
         } else {
             val startDateTime = com.google.api.client.util.DateTime(
                 ZonedDateTime.of(schedule.startDateTime, zoneId).toInstant().toEpochMilli()

@@ -92,21 +92,20 @@ class GoogleCalendarSyncService(
     private fun mergeOrConflict(schedule: Schedule, event: Event) {
         val googleUpdated = parseGoogleEventUpdated(event) ?: return
         val lastSynced = schedule.lastSyncedAt ?: LocalDateTime.MIN
+        val (parsedStart, parsedEnd, _) = parseEventTimes(event)
 
+        val timeMismatch = schedule.startDateTime != parsedStart || schedule.endDateTime != parsedEnd
         val googleModifiedSinceSync = googleUpdated.isAfter(lastSynced)
         val localModifiedSinceSync = schedule.lastModifiedAt.isAfter(lastSynced)
 
         if (googleModifiedSinceSync && localModifiedSinceSync) {
-            // Both sides modified → CONFLICT
             schedule.syncStatus = SyncStatus.CONFLICT
             schedule.googleLastModifiedAt = googleUpdated
             scheduleRepository.save(schedule)
             log.info("Conflict detected for schedule {} (google event {})", schedule.id, event.id)
-        } else if (googleModifiedSinceSync) {
-            // Only Google modified → accept Google version
+        } else if (googleModifiedSinceSync || timeMismatch) {
             applyGoogleEventToSchedule(schedule, event, googleUpdated)
         }
-        // If only local modified (or neither), do nothing — push sync already handled it
     }
 
     private fun applyGoogleEventToSchedule(
@@ -205,7 +204,11 @@ class GoogleCalendarSyncService(
         val endMillis = event.end?.dateTime?.value ?: event.end?.date?.value ?: 0L
 
         val start = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMillis), zoneId)
-        val end = LocalDateTime.ofInstant(Instant.ofEpochMilli(endMillis), zoneId)
+        var end = LocalDateTime.ofInstant(Instant.ofEpochMilli(endMillis), zoneId)
+
+        if (isAllDay) {
+            end = end.minusDays(1)
+        }
 
         return EventTimes(start, end, isAllDay)
     }
