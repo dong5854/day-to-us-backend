@@ -71,6 +71,9 @@ class SyncSettingService(
         )
     }
 
+    fun getUserByEmail(email: String) = userRepository.findByEmail(email)
+        .orElseThrow { EntityNotFoundException("User not found") }
+
     fun getGoogleCalendars(email: String): List<GoogleCalendarListEntry> {
         val user = userRepository.findByEmail(email)
             .orElseThrow { EntityNotFoundException("User not found") }

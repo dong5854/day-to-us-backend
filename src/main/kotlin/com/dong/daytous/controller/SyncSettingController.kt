@@ -5,7 +5,9 @@ import com.dong.daytous.dto.SyncSettingRequest
 import com.dong.daytous.dto.SyncSettingResponse
 import com.dong.daytous.service.SyncSettingService
 import org.springframework.http.ResponseEntity
+import com.dong.daytous.service.GoogleCalendarSyncService
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -16,6 +18,7 @@ import java.security.Principal
 @RequestMapping("/sync-settings")
 class SyncSettingController(
     private val syncSettingService: SyncSettingService,
+    private val googleCalendarSyncService: GoogleCalendarSyncService,
 ) {
     @GetMapping
     fun getSyncSetting(principal: Principal): ResponseEntity<SyncSettingResponse> {
@@ -33,5 +36,12 @@ class SyncSettingController(
     @GetMapping("/google-calendars")
     fun getGoogleCalendars(principal: Principal): List<GoogleCalendarListEntry> {
         return syncSettingService.getGoogleCalendars(principal.name)
+    }
+
+    @PostMapping("/sync-now")
+    fun syncNow(principal: Principal): ResponseEntity<Void> {
+        val user = syncSettingService.getUserByEmail(principal.name)
+        googleCalendarSyncService.syncForUser(user.id)
+        return ResponseEntity.ok().build()
     }
 }
