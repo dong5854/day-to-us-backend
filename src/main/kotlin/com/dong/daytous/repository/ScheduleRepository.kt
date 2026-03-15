@@ -25,4 +25,6 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     fun findBySharedSpaceIdAndSyncStatus(sharedSpaceId: UUID, syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
 
     fun findBySyncStatus(syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
+
+    fun findByStartDateTimeBetween(start: LocalDateTime, end: LocalDateTime): List<Schedule>
 }
