@@ -162,6 +162,152 @@ class FixedExpenseServiceTest {
     }
 
     @Nested
+    inner class UpdateFixedExpense {
+
+        private val expenseId = UUID.randomUUID()
+
+        @Test
+        fun `고정 지출을 수정할 수 있다`() {
+            val existingExpense = FixedExpense(
+                description = "월세",
+                amount = BigDecimal("500000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+                sharedSpace = sharedSpace,
+            ).apply { id = expenseId }
+
+            val request = FixedExpenseRequest(
+                description = "월세 인상",
+                amount = BigDecimal("550000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 3, 1),
+            )
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(fixedExpenseRepository.findById(expenseId)).thenReturn(Optional.of(existingExpense))
+            whenever(fixedExpenseRepository.save(any<FixedExpense>())).thenAnswer {
+                it.arguments[0] as FixedExpense
+            }
+
+            val result = fixedExpenseService.updateFixedExpense(spaceId, expenseId, request, email)
+
+            assertThat(result.id).isEqualTo(expenseId)
+            assertThat(result.description).isEqualTo("월세 인상")
+            assertThat(result.amount).isEqualByComparingTo(BigDecimal("550000"))
+            assertThat(result.startDate).isEqualTo(LocalDate.of(2024, 3, 1))
+        }
+
+        @Test
+        fun `빈도를 변경할 수 있다`() {
+            val existingExpense = FixedExpense(
+                description = "장보기",
+                amount = BigDecimal("100000"),
+                frequency = Frequency.WEEKLY,
+                startDate = LocalDate.of(2024, 1, 7),
+                sharedSpace = sharedSpace,
+            ).apply { id = expenseId }
+
+            val request = FixedExpenseRequest(
+                description = "장보기",
+                amount = BigDecimal("400000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 7),
+            )
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(fixedExpenseRepository.findById(expenseId)).thenReturn(Optional.of(existingExpense))
+            whenever(fixedExpenseRepository.save(any<FixedExpense>())).thenAnswer {
+                it.arguments[0] as FixedExpense
+            }
+
+            val result = fixedExpenseService.updateFixedExpense(spaceId, expenseId, request, email)
+
+            assertThat(result.frequency).isEqualTo(Frequency.MONTHLY)
+        }
+
+        @Test
+        fun `존재하지 않는 고정 지출을 수정하면 예외가 발생한다`() {
+            val request = FixedExpenseRequest(
+                description = "월세",
+                amount = BigDecimal("500000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+            )
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(fixedExpenseRepository.findById(expenseId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy {
+                fixedExpenseService.updateFixedExpense(spaceId, expenseId, request, email)
+            }.isInstanceOf(EntityNotFoundException::class.java)
+        }
+
+        @Test
+        fun `다른 공간의 고정 지출을 수정하면 예외가 발생한다`() {
+            val otherSpaceId = UUID.randomUUID()
+            val request = FixedExpenseRequest(
+                description = "월세",
+                amount = BigDecimal("500000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+            )
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+
+            assertThatThrownBy {
+                fixedExpenseService.updateFixedExpense(otherSpaceId, expenseId, request, email)
+            }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Access denied")
+        }
+    }
+
+    @Nested
+    inner class DeleteFixedExpense {
+
+        private val expenseId = UUID.randomUUID()
+
+        @Test
+        fun `고정 지출을 삭제할 수 있다`() {
+            val existingExpense = FixedExpense(
+                description = "월세",
+                amount = BigDecimal("500000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+                sharedSpace = sharedSpace,
+            ).apply { id = expenseId }
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(fixedExpenseRepository.findById(expenseId)).thenReturn(Optional.of(existingExpense))
+
+            fixedExpenseService.deleteFixedExpense(spaceId, expenseId, email)
+
+            org.mockito.kotlin.verify(fixedExpenseRepository).delete(existingExpense)
+        }
+
+        @Test
+        fun `존재하지 않는 고정 지출을 삭제하면 예외가 발생한다`() {
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(fixedExpenseRepository.findById(expenseId)).thenReturn(Optional.empty())
+
+            assertThatThrownBy {
+                fixedExpenseService.deleteFixedExpense(spaceId, expenseId, email)
+            }.isInstanceOf(EntityNotFoundException::class.java)
+        }
+
+        @Test
+        fun `다른 공간의 고정 지출을 삭제하면 예외가 발생한다`() {
+            val otherSpaceId = UUID.randomUUID()
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+
+            assertThatThrownBy {
+                fixedExpenseService.deleteFixedExpense(otherSpaceId, expenseId, email)
+            }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Access denied")
+        }
+    }
+
+    @Nested
     inner class GetAllFixedExpenses {
 
         @Test

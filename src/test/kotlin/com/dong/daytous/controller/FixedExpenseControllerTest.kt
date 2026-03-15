@@ -27,8 +27,10 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.math.BigDecimal
@@ -139,6 +141,50 @@ class FixedExpenseControllerTest {
             .andExpect(jsonPath("$[0].description").value("월세"))
             .andExpect(jsonPath("$[1].description").value("보험"))
             .andExpect(jsonPath("$").isArray)
+    }
+
+    @Test
+    fun `PUT 고정 지출을 수정할 수 있다`() {
+        val expenseId = UUID.randomUUID()
+        val request = FixedExpenseRequest(
+            description = "월세 인상",
+            amount = BigDecimal("550000"),
+            frequency = Frequency.MONTHLY,
+            startDate = LocalDate.of(2024, 3, 1),
+        )
+        val response = FixedExpenseResponse(
+            id = expenseId,
+            description = "월세 인상",
+            amount = BigDecimal("550000"),
+            frequency = Frequency.MONTHLY,
+            startDate = LocalDate.of(2024, 3, 1),
+        )
+
+        whenever(fixedExpenseService.updateFixedExpense(eq(spaceId), eq(expenseId), any(), eq(email)))
+            .thenReturn(response)
+
+        mockMvc.perform(
+            put("/shared-spaces/$spaceId/fixed-expenses/$expenseId")
+                .with(user(email))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonMapper.writeValueAsString(request)),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.description").value("월세 인상"))
+            .andExpect(jsonPath("$.amount").value(550000))
+    }
+
+    @Test
+    fun `DELETE 고정 지출을 삭제할 수 있다`() {
+        val expenseId = UUID.randomUUID()
+
+        mockMvc.perform(
+            delete("/shared-spaces/$spaceId/fixed-expenses/$expenseId")
+                .with(user(email))
+                .with(csrf()),
+        )
+            .andExpect(status().isNoContent)
     }
 
     @Test
