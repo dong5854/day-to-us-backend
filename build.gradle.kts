@@ -35,6 +35,8 @@ dependencies {
     implementation("com.google.api-client:google-api-client:2.7.2")
     implementation("com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.31.0")
+    implementation("nl.martijndwars:web-push:5.1.2")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.80")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
