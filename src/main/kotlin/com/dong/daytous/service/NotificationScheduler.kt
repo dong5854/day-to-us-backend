@@ -5,7 +5,6 @@ import com.dong.daytous.domain.fixedexpense.Frequency
 import com.dong.daytous.repository.FixedExpenseRepository
 import com.dong.daytous.repository.PushSubscriptionRepository
 import com.dong.daytous.repository.ScheduleRepository
-import com.dong.daytous.repository.SharedSpaceRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -19,7 +18,6 @@ import java.time.format.DateTimeFormatter
 class NotificationScheduler(
     private val fixedExpenseRepository: FixedExpenseRepository,
     private val scheduleRepository: ScheduleRepository,
-    private val sharedSpaceRepository: SharedSpaceRepository,
     private val pushSubscriptionRepository: PushSubscriptionRepository,
     private val webPushService: WebPushService,
 ) {
@@ -41,12 +39,15 @@ class NotificationScheduler(
     }
 
     private fun sendFixedExpenseNotifications(today: LocalDate, tomorrow: LocalDate) {
-        val allSpaces = sharedSpaceRepository.findAll()
+        val expensesBySpaceId = fixedExpenseRepository.findAllWithSharedSpace().groupBy { it.sharedSpace.id }
+        val spaceIds = expensesBySpaceId.keys.filterNotNull()
+        if (spaceIds.isEmpty()) return
 
-        for (space in allSpaces) {
-            val expenses = fixedExpenseRepository.findBySharedSpaceId(space.id!!)
-            val subscriptions = pushSubscriptionRepository.findByUserSharedSpaceId(space.id!!)
-            if (subscriptions.isEmpty()) continue
+        val subscriptionsBySpaceId = pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(spaceIds)
+            .groupBy { it.user.sharedSpace?.id }
+
+        for ((spaceId, expenses) in expensesBySpaceId) {
+            val subscriptions = subscriptionsBySpaceId[spaceId] ?: continue
 
             for (expense in expenses) {
                 val nextPaymentDate = calculateNextPaymentDate(expense, today)

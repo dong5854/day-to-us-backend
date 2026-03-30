@@ -10,7 +10,6 @@ import com.dong.daytous.domain.user.User
 import com.dong.daytous.repository.FixedExpenseRepository
 import com.dong.daytous.repository.PushSubscriptionRepository
 import com.dong.daytous.repository.ScheduleRepository
-import com.dong.daytous.repository.SharedSpaceRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -38,9 +37,6 @@ class NotificationSchedulerTest {
 
     @Mock
     lateinit var scheduleRepository: ScheduleRepository
-
-    @Mock
-    lateinit var sharedSpaceRepository: SharedSpaceRepository
 
     @Mock
     lateinit var pushSubscriptionRepository: PushSubscriptionRepository
@@ -169,7 +165,7 @@ class NotificationSchedulerTest {
 
             notificationScheduler.sendDailyNotifications()
 
-            verify(sharedSpaceRepository, never()).findAll()
+            verify(fixedExpenseRepository, never()).findAll()
             verify(scheduleRepository, never()).findByStartDateTimeBetween(any(), any())
         }
 
@@ -182,13 +178,12 @@ class NotificationSchedulerTest {
                 description = "넷플릭스",
                 amount = BigDecimal("17000"),
                 frequency = Frequency.MONTHLY,
-                startDate = today.minusMonths(1),
+                startDate = today,
                 sharedSpace = sharedSpace,
             ).apply { id = UUID.randomUUID() }
 
-            whenever(sharedSpaceRepository.findAll()).thenReturn(listOf(sharedSpace))
-            whenever(fixedExpenseRepository.findBySharedSpaceId(spaceId)).thenReturn(listOf(expense))
-            whenever(pushSubscriptionRepository.findByUserSharedSpaceId(spaceId)).thenReturn(listOf(subscription))
+            whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(listOf(expense))
+            whenever(pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(any())).thenReturn(listOf(subscription))
             whenever(scheduleRepository.findByStartDateTimeBetween(any(), any())).thenReturn(emptyList())
 
             notificationScheduler.sendDailyNotifications()
@@ -215,12 +210,11 @@ class NotificationSchedulerTest {
                 sharedSpace = sharedSpace,
             ).apply { id = UUID.randomUUID() }
 
-            whenever(sharedSpaceRepository.findAll()).thenReturn(listOf(sharedSpace))
-            whenever(fixedExpenseRepository.findBySharedSpaceId(spaceId)).thenReturn(emptyList())
-            whenever(pushSubscriptionRepository.findByUserSharedSpaceId(spaceId)).thenReturn(listOf(subscription))
+            whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(emptyList())
             whenever(scheduleRepository.findByStartDateTimeBetween(any(), any()))
                 .thenReturn(listOf(schedule))
                 .thenReturn(emptyList())
+            whenever(pushSubscriptionRepository.findByUserSharedSpaceId(spaceId)).thenReturn(listOf(subscription))
 
             notificationScheduler.sendDailyNotifications()
 
@@ -236,9 +230,7 @@ class NotificationSchedulerTest {
         @Test
         fun `구독자가 없으면 알림을 보내지 않는다`() {
             whenever(webPushService.isEnabled()).thenReturn(true)
-            whenever(sharedSpaceRepository.findAll()).thenReturn(listOf(sharedSpace))
-            whenever(fixedExpenseRepository.findBySharedSpaceId(spaceId)).thenReturn(emptyList())
-            whenever(pushSubscriptionRepository.findByUserSharedSpaceId(spaceId)).thenReturn(emptyList())
+            whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(emptyList())
             whenever(scheduleRepository.findByStartDateTimeBetween(any(), any())).thenReturn(emptyList())
 
             notificationScheduler.sendDailyNotifications()
