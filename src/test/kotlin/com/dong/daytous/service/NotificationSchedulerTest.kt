@@ -166,7 +166,7 @@ class NotificationSchedulerTest {
             notificationScheduler.sendDailyNotifications()
 
             verify(fixedExpenseRepository, never()).findAll()
-            verify(scheduleRepository, never()).findByStartDateTimeBetween(any(), any())
+            verify(scheduleRepository, never()).findByStartDateTimeBetweenWithSharedSpace(any(), any())
         }
 
         @Test
@@ -184,7 +184,7 @@ class NotificationSchedulerTest {
 
             whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(listOf(expense))
             whenever(pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(any())).thenReturn(listOf(subscription))
-            whenever(scheduleRepository.findByStartDateTimeBetween(any(), any())).thenReturn(emptyList())
+            whenever(scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(any(), any())).thenReturn(emptyList())
 
             notificationScheduler.sendDailyNotifications()
 
@@ -211,10 +211,9 @@ class NotificationSchedulerTest {
             ).apply { id = UUID.randomUUID() }
 
             whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(emptyList())
-            whenever(scheduleRepository.findByStartDateTimeBetween(any(), any()))
+            whenever(scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(any(), any()))
                 .thenReturn(listOf(schedule))
-                .thenReturn(emptyList())
-            whenever(pushSubscriptionRepository.findByUserSharedSpaceId(spaceId)).thenReturn(listOf(subscription))
+            whenever(pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(any())).thenReturn(listOf(subscription))
 
             notificationScheduler.sendDailyNotifications()
 
@@ -231,7 +230,7 @@ class NotificationSchedulerTest {
         fun `구독자가 없으면 알림을 보내지 않는다`() {
             whenever(webPushService.isEnabled()).thenReturn(true)
             whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(emptyList())
-            whenever(scheduleRepository.findByStartDateTimeBetween(any(), any())).thenReturn(emptyList())
+            whenever(scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(any(), any())).thenReturn(emptyList())
 
             notificationScheduler.sendDailyNotifications()
 

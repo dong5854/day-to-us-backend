@@ -74,31 +74,23 @@ class NotificationScheduler(
 
     private fun sendScheduleNotifications(today: LocalDate, tomorrow: LocalDate) {
         val todayStart = LocalDateTime.of(today, LocalTime.MIN)
-        val todayEnd = LocalDateTime.of(today, LocalTime.MAX)
-        val tomorrowStart = LocalDateTime.of(tomorrow, LocalTime.MIN)
         val tomorrowEnd = LocalDateTime.of(tomorrow, LocalTime.MAX)
 
-        val todaySchedules = scheduleRepository.findByStartDateTimeBetween(todayStart, todayEnd)
-        for (schedule in todaySchedules) {
-            val subscriptions = pushSubscriptionRepository.findByUserSharedSpaceId(schedule.sharedSpace.id!!)
-            if (subscriptions.isEmpty()) continue
+        val allSchedules = scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(todayStart, tomorrowEnd)
+        if (allSchedules.isEmpty()) return
 
-            val title = "\uD83D\uDCC5 오늘 일정"
+        val spaceIds = allSchedules.map { it.sharedSpace.id!! }.distinct()
+        val subscriptionsBySpaceId = pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(spaceIds)
+            .groupBy { it.user.sharedSpace?.id }
+
+        for (schedule in allSchedules) {
+            val subscriptions = subscriptionsBySpaceId[schedule.sharedSpace.id] ?: continue
             val time = schedule.startDateTime.format(timeFormatter)
-            val body = "${schedule.title} ($time)"
-            subscriptions.forEach { sub ->
-                webPushService.sendNotification(sub, title, body, "/", "schedule-${schedule.id}")
-            }
-        }
+            val isToday = schedule.startDateTime.toLocalDate() == today
 
-        val tomorrowSchedules = scheduleRepository.findByStartDateTimeBetween(tomorrowStart, tomorrowEnd)
-        for (schedule in tomorrowSchedules) {
-            val subscriptions = pushSubscriptionRepository.findByUserSharedSpaceId(schedule.sharedSpace.id!!)
-            if (subscriptions.isEmpty()) continue
+            val title = if (isToday) "\uD83D\uDCC5 오늘 일정" else "\uD83D\uDCC5 내일 일정"
+            val body = if (isToday) "${schedule.title} ($time)" else "내일 ${schedule.title} ($time) 예정입니다"
 
-            val title = "\uD83D\uDCC5 내일 일정"
-            val time = schedule.startDateTime.format(timeFormatter)
-            val body = "내일 ${schedule.title} ($time) 예정입니다"
             subscriptions.forEach { sub ->
                 webPushService.sendNotification(sub, title, body, "/", "schedule-${schedule.id}")
             }
