@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: day-to-us-backend
+  namespace: day-to-us
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: day-to-us-backend
+  template:
+    metadata:
+      labels:
+        app: day-to-us-backend
+    spec:
+      imagePullSecrets:
+      - name: regcred
+
+      containers:
+      - name: backend
+        image: ghcr.io/dong5854/day-to-us-backend:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: PROD_DB_URL
+          value: "jdbc:postgresql://db:5432/daytous"
+        - name: PROD_DB_USERNAME
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: POSTGRES_USER } }
+        - name: PROD_DB_PASSWORD
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: POSTGRES_PASSWORD } }
+        - name: PROD_DDL_AUTO
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: PROD_DDL_AUTO } }
+        - name: PROD_CORS_ALLOWED_ORIGINS
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: PROD_CORS_ALLOWED_ORIGINS } }
+        - name: GOOGLE_CLIENT_ID
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: GOOGLE_CLIENT_ID } }
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: GOOGLE_CLIENT_SECRET } }
+        - name: JWT_SECRET_KEY
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: JWT_SECRET_KEY } }
+        - name: JWT_EXPIRATION_TIME
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: JWT_EXPIRATION_TIME } }
+        - name: PROD_OAUTH_REDIRECT_URI
+          valueFrom: { secretKeyRef: { name: day-to-us-secret, key: PROD_OAUTH_REDIRECT_URI } }
+        - name: SERVER_FORWARD_HEADERS_STRATEGY
+          value: "native"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+          value: "DEBUG"
+        - name: SERVER_SERVLET_SESSION_COOKIE_SAMESITE
+          value: "none"
+        - name: SERVER_SERVLET_SESSION_COOKIE_SECURE
+          value: "true"
+        resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "400m"
+#        livenessProbe:
+#            httpGet:
+#              path: /
+#              port: 8080
+#            initialDelaySeconds: 60
+#            periodSeconds: 10
+#            timeoutSeconds: 5
+#            successThreshold: 1
+#            failureThreshold: 3
+#        readinessProbe:
+#            httpGet:
+#              path: /
+#              port: 8080
+#            initialDelaySeconds: 45
+#            periodSeconds: 10
+#            timeoutSeconds: 5
+#            successThreshold: 1
+#            failureThreshold: 3
