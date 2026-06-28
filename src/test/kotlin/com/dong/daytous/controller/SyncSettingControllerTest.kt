@@ -9,6 +9,7 @@ import com.dong.daytous.dto.GoogleCalendarListEntry
 import com.dong.daytous.dto.SyncSettingRequest
 import com.dong.daytous.dto.SyncSettingResponse
 import com.dong.daytous.service.CustomOAuth2UserService
+import com.dong.daytous.service.GoogleCalendarSyncService
 import com.dong.daytous.service.SyncSettingService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -45,6 +46,9 @@ class SyncSettingControllerTest {
 
     @MockitoBean
     lateinit var syncSettingService: SyncSettingService
+
+    @MockitoBean
+    lateinit var googleCalendarSyncService: GoogleCalendarSyncService
 
     @MockitoBean
     lateinit var clientRegistrationRepository: ClientRegistrationRepository
