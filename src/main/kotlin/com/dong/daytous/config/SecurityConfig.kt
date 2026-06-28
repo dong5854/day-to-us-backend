@@ -34,6 +34,7 @@ class SecurityConfig(
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/oauth2/**",
+                        "/push/vapid-key",
                     ).permitAll()
                     .anyRequest()
                     .authenticated()

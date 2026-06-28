@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
+import java.time.LocalDate
 import java.util.UUID
 
 @DataJpaTest
@@ -21,7 +22,7 @@ class BudgetEntryRepositoryTest {
     fun `BudgetEntry를 저장하고 ID로 찾을 수 있다`() {
         // given
         val sharedSpace = entityManager.persistAndFlush(SharedSpace(name = "Test Space"))
-        val budgetEntry = BudgetEntry(description = "Coffee", amount = 5.0, sharedSpace = sharedSpace)
+        val budgetEntry = BudgetEntry(description = "Coffee", amount = 5.0, date = LocalDate.now(), sharedSpace = sharedSpace)
 
         // when
         val savedBudgetEntry = budgetEntryRepository.saveAndFlush(budgetEntry)
@@ -44,9 +45,9 @@ class BudgetEntryRepositoryTest {
         val sharedSpace1 = entityManager.persistAndFlush(SharedSpace(name = "Test Space 1"))
         val sharedSpace2 = entityManager.persistAndFlush(SharedSpace(name = "Test Space 2"))
 
-        entityManager.persist(BudgetEntry(description = "Coffee", amount = 5.0, sharedSpace = sharedSpace1))
-        entityManager.persist(BudgetEntry(description = "Movie", amount = 12.0, sharedSpace = sharedSpace1))
-        entityManager.persist(BudgetEntry(description = "Lunch", amount = 15.0, sharedSpace = sharedSpace2))
+        entityManager.persist(BudgetEntry(description = "Coffee", amount = 5.0, date = LocalDate.now(), sharedSpace = sharedSpace1))
+        entityManager.persist(BudgetEntry(description = "Movie", amount = 12.0, date = LocalDate.now(), sharedSpace = sharedSpace1))
+        entityManager.persist(BudgetEntry(description = "Lunch", amount = 15.0, date = LocalDate.now(), sharedSpace = sharedSpace2))
         entityManager.flush()
         entityManager.clear()
 

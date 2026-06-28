@@ -3,6 +3,8 @@ package com.dong.daytous.domain.schedule
 import com.dong.daytous.domain.sharedspace.SharedSpace
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
@@ -41,6 +43,22 @@ class Schedule(
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
     var id: UUID? = null
+
+    @Column(name = "google_event_id")
+    var googleEventId: String? = null
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var syncStatus: SyncStatus = SyncStatus.LOCAL_ONLY
+
+    @Column(name = "last_synced_at")
+    var lastSyncedAt: LocalDateTime? = null
+
+    @Column(name = "last_modified_at")
+    var lastModifiedAt: LocalDateTime = LocalDateTime.now()
+
+    @Column(name = "google_last_modified_at")
+    var googleLastModifiedAt: LocalDateTime? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

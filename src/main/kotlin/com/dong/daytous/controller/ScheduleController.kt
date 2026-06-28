@@ -2,6 +2,7 @@ package com.dong.daytous.controller
 
 import com.dong.daytous.dto.ScheduleRequest
 import com.dong.daytous.dto.ScheduleResponse
+import com.dong.daytous.service.ConflictResolution
 import com.dong.daytous.service.ScheduleService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -76,5 +77,24 @@ class ScheduleController(
     ): ResponseEntity<Void> {
         scheduleService.deleteSchedule(spaceId, scheduleId, principal.name)
         return ResponseEntity.noContent().build()
+    }
+
+    @GetMapping("/conflicts")
+    fun getConflicts(
+        @PathVariable spaceId: UUID,
+        principal: Principal,
+    ): List<ScheduleResponse> {
+        return scheduleService.getConflicts(spaceId, principal.name)
+    }
+
+    @PostMapping("/{scheduleId}/resolve-conflict")
+    fun resolveConflict(
+        @PathVariable spaceId: UUID,
+        @PathVariable scheduleId: UUID,
+        @RequestParam resolution: ConflictResolution,
+        principal: Principal,
+    ): ResponseEntity<ScheduleResponse> {
+        val resolved = scheduleService.resolveConflict(spaceId, scheduleId, resolution, principal.name)
+        return ResponseEntity.ok(resolved)
     }
 }

@@ -2,6 +2,8 @@ package com.dong.daytous.repository
 
 import com.dong.daytous.domain.schedule.Schedule
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 import java.util.UUID
@@ -17,4 +19,24 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     
     // 단순히 공간의 모든 일정 조회 (필요 시 사용)
     fun findBySharedSpaceIdOrderByStartDateTime(sharedSpaceId: UUID): List<Schedule>
+
+    fun findByGoogleEventId(googleEventId: String): Schedule?
+
+    fun findBySharedSpaceIdAndGoogleEventIdIn(sharedSpaceId: UUID, googleEventIds: List<String>): List<Schedule>
+
+    fun findBySharedSpaceIdAndSyncStatus(sharedSpaceId: UUID, syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
+
+    fun findBySyncStatus(syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
+
+    fun findByStartDateTimeBetween(start: LocalDateTime, end: LocalDateTime): List<Schedule>
+
+    @Query("""
+        SELECT s FROM Schedule s
+        JOIN FETCH s.sharedSpace
+        WHERE s.startDateTime BETWEEN :start AND :end
+    """)
+    fun findByStartDateTimeBetweenWithSharedSpace(
+        @Param("start") start: LocalDateTime,
+        @Param("end") end: LocalDateTime
+    ): List<Schedule>
 }

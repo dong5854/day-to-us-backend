@@ -53,6 +53,52 @@ class FixedExpenseService(
         return fixedExpenseRepository.findBySharedSpaceId(spaceId).map { it.toResponse() }
     }
 
+    @Transactional
+    fun updateFixedExpense(
+        spaceId: UUID,
+        expenseId: UUID,
+        request: FixedExpenseRequest,
+        email: String,
+    ): FixedExpenseResponse {
+        checkAccess(spaceId, email)
+
+        val expense =
+            fixedExpenseRepository
+                .findById(expenseId)
+                .filter { it.sharedSpace.id == spaceId }
+                .orElseThrow { EntityNotFoundException("FixedExpense with id $expenseId not found") }
+
+        val updatedExpense =
+            FixedExpense(
+                description = request.description,
+                amount = request.amount,
+                frequency = request.frequency,
+                startDate = request.startDate,
+                sharedSpace = expense.sharedSpace,
+            ).apply {
+                id = expense.id
+            }
+
+        return fixedExpenseRepository.save(updatedExpense).toResponse()
+    }
+
+    @Transactional
+    fun deleteFixedExpense(
+        spaceId: UUID,
+        expenseId: UUID,
+        email: String,
+    ) {
+        checkAccess(spaceId, email)
+
+        val expense =
+            fixedExpenseRepository
+                .findById(expenseId)
+                .filter { it.sharedSpace.id == spaceId }
+                .orElseThrow { EntityNotFoundException("FixedExpense with id $expenseId not found") }
+
+        fixedExpenseRepository.delete(expense)
+    }
+
     private fun checkAccess(
         spaceId: UUID,
         email: String,
