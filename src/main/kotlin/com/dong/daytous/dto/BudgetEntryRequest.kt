@@ -7,9 +7,11 @@ import java.util.UUID
 data class BudgetEntryRequest(
     val description: String,
     val amount: Double,
-    
+
     @field:NotNull
     val date: LocalDate,
 
+    val categoryId: UUID? = null,
+    val paymentMethodId: UUID? = null,
     val fixedExpenseId: UUID? = null
 )

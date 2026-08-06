@@ -6,6 +6,8 @@ import com.dong.daytous.domain.user.Role
 import com.dong.daytous.domain.user.User
 import com.dong.daytous.dto.BudgetEntryRequest
 import com.dong.daytous.repository.BudgetEntryRepository
+import com.dong.daytous.repository.ExpenseCategoryRepository
+import com.dong.daytous.repository.PaymentMethodRepository
 import com.dong.daytous.repository.SharedSpaceRepository
 import com.dong.daytous.repository.UserRepository
 import jakarta.persistence.EntityNotFoundException
@@ -36,6 +38,12 @@ class BudgetServiceTest {
 
     @Mock
     lateinit var userRepository: UserRepository
+
+    @Mock
+    lateinit var expenseCategoryRepository: ExpenseCategoryRepository
+
+    @Mock
+    lateinit var paymentMethodRepository: PaymentMethodRepository
 
     @InjectMocks
     lateinit var budgetService: BudgetService

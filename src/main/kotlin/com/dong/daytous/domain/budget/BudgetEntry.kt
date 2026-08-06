@@ -1,5 +1,7 @@
 package com.dong.daytous.domain.budget
 
+import com.dong.daytous.domain.category.ExpenseCategory
+import com.dong.daytous.domain.paymentmethod.PaymentMethod
 import com.dong.daytous.domain.sharedspace.SharedSpace
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -17,7 +19,15 @@ import java.util.UUID
 data class BudgetEntry(
     val description: String,
     val amount: Double,
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    val category: ExpenseCategory? = null,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_method_id")
+    val paymentMethod: PaymentMethod? = null,
+
     @Column(nullable = false)
     val date: LocalDate, // 지출 날짜
 

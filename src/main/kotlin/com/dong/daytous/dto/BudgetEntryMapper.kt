@@ -8,5 +8,7 @@ fun BudgetEntry.toResponse(): BudgetEntryResponse =
         description = this.description,
         amount = this.amount,
         date = this.date,
+        category = this.category?.toResponse(),
+        paymentMethod = this.paymentMethod?.toResponse(),
         fixedExpenseId = this.fixedExpenseId
     )
