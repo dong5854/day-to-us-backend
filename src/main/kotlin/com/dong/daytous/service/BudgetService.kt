@@ -3,6 +3,8 @@ package com.dong.daytous.service
 import com.dong.daytous.domain.budget.BudgetEntry
 import com.dong.daytous.dto.BudgetEntryRequest
 import com.dong.daytous.repository.BudgetEntryRepository
+import com.dong.daytous.repository.ExpenseCategoryRepository
+import com.dong.daytous.repository.PaymentMethodRepository
 import com.dong.daytous.repository.SharedSpaceRepository
 import com.dong.daytous.repository.UserRepository
 import jakarta.persistence.EntityNotFoundException
@@ -16,6 +18,8 @@ class BudgetService(
     private val budgetEntryRepository: BudgetEntryRepository,
     private val sharedSpaceRepository: SharedSpaceRepository,
     private val userRepository: UserRepository,
+    private val expenseCategoryRepository: ExpenseCategoryRepository,
+    private val paymentMethodRepository: PaymentMethodRepository,
 ) {
     @Transactional(readOnly = true)
     fun getAllBudgetEntriesForSpace(
@@ -56,19 +60,28 @@ class BudgetService(
         email: String,
     ): BudgetEntry {
         checkAccess(spaceId, email)
-        val sharedSpace =
-            sharedSpaceRepository
-                .findById(spaceId)
-                .orElseThrow { EntityNotFoundException("SharedSpace with id $spaceId not found") }
+        val sharedSpace = sharedSpaceRepository
+            .findById(spaceId)
+            .orElseThrow { EntityNotFoundException("SharedSpace with id $spaceId not found") }
 
-        val newEntry =
-            BudgetEntry(
-                description = request.description,
-                amount = request.amount,
-                date = request.date,
-                sharedSpace = sharedSpace,
-                fixedExpenseId = request.fixedExpenseId,
-            )
+        val category = request.categoryId?.let {
+            expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
+                ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
+        }
+        val paymentMethod = request.paymentMethodId?.let {
+            paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
+                ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")
+        }
+
+        val newEntry = BudgetEntry(
+            description = request.description,
+            amount = request.amount,
+            date = request.date,
+            sharedSpace = sharedSpace,
+            category = category,
+            paymentMethod = paymentMethod,
+            fixedExpenseId = request.fixedExpenseId,
+        )
         return budgetEntryRepository.save(newEntry)
     }
 
@@ -80,13 +93,24 @@ class BudgetService(
         email: String,
     ): BudgetEntry {
         val existingEntry = getBudgetEntryById(spaceId, entryId, email)
-        val updatedEntry =
-            existingEntry.copy(
-                description = request.description,
-                amount = request.amount,
-                date = request.date,
-                fixedExpenseId = request.fixedExpenseId,
-            )
+
+        val category = request.categoryId?.let {
+            expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
+                ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
+        }
+        val paymentMethod = request.paymentMethodId?.let {
+            paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
+                ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")
+        }
+
+        val updatedEntry = existingEntry.copy(
+            description = request.description,
+            amount = request.amount,
+            date = request.date,
+            category = category,
+            paymentMethod = paymentMethod,
+            fixedExpenseId = request.fixedExpenseId,
+        )
         return budgetEntryRepository.save(updatedEntry)
     }
 
@@ -104,10 +128,9 @@ class BudgetService(
         spaceId: UUID,
         email: String,
     ) {
-        val user =
-            userRepository
-                .findByEmail(email)
-                .orElseThrow { EntityNotFoundException("User not found") }
+        val user = userRepository
+            .findByEmail(email)
+            .orElseThrow { EntityNotFoundException("User not found") }
 
         if (user.sharedSpace?.id != spaceId) {
             throw IllegalArgumentException("Access denied: User does not belong to this shared space")

@@ -8,5 +8,7 @@ data class BudgetEntryResponse(
     val description: String,
     val amount: Double,
     val date: LocalDate,
+    val category: ExpenseCategoryResponse?,
+    val paymentMethod: PaymentMethodResponse?,
     val fixedExpenseId: UUID?
 )
