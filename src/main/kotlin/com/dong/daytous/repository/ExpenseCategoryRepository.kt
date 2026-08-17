@@ -9,4 +9,5 @@ import java.util.UUID
 interface ExpenseCategoryRepository : JpaRepository<ExpenseCategory, UUID> {
     fun findBySharedSpaceId(spaceId: UUID): List<ExpenseCategory>
     fun findByIdAndSharedSpaceId(id: UUID, spaceId: UUID): ExpenseCategory?
+    fun existsByNameAndSharedSpaceId(name: String, spaceId: UUID): Boolean
 }
