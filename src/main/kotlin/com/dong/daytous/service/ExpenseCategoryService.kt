@@ -4,6 +4,7 @@ import com.dong.daytous.domain.category.ExpenseCategory
 import com.dong.daytous.dto.ExpenseCategoryRequest
 import com.dong.daytous.dto.ExpenseCategoryResponse
 import com.dong.daytous.dto.toResponse
+import com.dong.daytous.repository.BudgetEntryRepository
 import com.dong.daytous.repository.ExpenseCategoryRepository
 import com.dong.daytous.repository.SharedSpaceRepository
 import com.dong.daytous.repository.UserRepository
@@ -17,6 +18,7 @@ class ExpenseCategoryService(
     private val expenseCategoryRepository: ExpenseCategoryRepository,
     private val sharedSpaceRepository: SharedSpaceRepository,
     private val userRepository: UserRepository,
+    private val budgetEntryRepository: BudgetEntryRepository,
 ) {
     @Transactional
     fun createCategory(
@@ -49,6 +51,8 @@ class ExpenseCategoryService(
         checkAccess(spaceId, email)
         val category = expenseCategoryRepository.findByIdAndSharedSpaceId(categoryId, spaceId)
             ?: throw EntityNotFoundException("ExpenseCategory with id $categoryId not found in space $spaceId")
+        // 기존 가계부 항목의 카테고리 참조를 NULL로 처리 후 삭제
+        budgetEntryRepository.nullifyCategoryById(categoryId)
         expenseCategoryRepository.delete(category)
     }
 

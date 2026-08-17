@@ -4,6 +4,7 @@ import com.dong.daytous.domain.paymentmethod.PaymentMethod
 import com.dong.daytous.dto.PaymentMethodRequest
 import com.dong.daytous.dto.PaymentMethodResponse
 import com.dong.daytous.dto.toResponse
+import com.dong.daytous.repository.BudgetEntryRepository
 import com.dong.daytous.repository.PaymentMethodRepository
 import com.dong.daytous.repository.SharedSpaceRepository
 import com.dong.daytous.repository.UserRepository
@@ -17,6 +18,7 @@ class PaymentMethodService(
     private val paymentMethodRepository: PaymentMethodRepository,
     private val sharedSpaceRepository: SharedSpaceRepository,
     private val userRepository: UserRepository,
+    private val budgetEntryRepository: BudgetEntryRepository,
 ) {
     @Transactional
     fun createPaymentMethod(
@@ -49,6 +51,8 @@ class PaymentMethodService(
         checkAccess(spaceId, email)
         val method = paymentMethodRepository.findByIdAndSharedSpaceId(methodId, spaceId)
             ?: throw EntityNotFoundException("PaymentMethod with id $methodId not found in space $spaceId")
+        // 기존 가계부 항목의 결제수단 참조를 NULL로 처리 후 삭제
+        budgetEntryRepository.nullifyPaymentMethodById(methodId)
         paymentMethodRepository.delete(method)
     }
 
