@@ -27,6 +27,11 @@ class PaymentMethodService(
         email: String,
     ): PaymentMethodResponse {
         checkAccess(spaceId, email)
+
+        if (paymentMethodRepository.existsByNameAndSharedSpaceId(request.name, spaceId)) {
+            throw IllegalArgumentException("이미 해당 공유 공간에 동일한 이름의 결제수단이 존재합니다.")
+        }
+
         val sharedSpace = sharedSpaceRepository.findById(spaceId)
             .orElseThrow { EntityNotFoundException("SharedSpace with id $spaceId not found") }
         val method = PaymentMethod(name = request.name, sharedSpace = sharedSpace)

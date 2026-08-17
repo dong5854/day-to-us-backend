@@ -7,7 +7,12 @@ import java.util.Objects
 import java.util.UUID
 
 @Entity
-@Table(name = "expense_category")
+@Table(
+    name = "expense_category",
+    uniqueConstraints = [
+        UniqueConstraint(columnNames = ["name", "shared_space_id"])
+    ]
+)
 class ExpenseCategory(
     @Column(nullable = false)
     val name: String,
