@@ -10,5 +10,7 @@ data class FixedExpenseResponse(
     val description: String,
     val amount: BigDecimal,
     val frequency: Frequency,
-    val startDate: LocalDate
+    val startDate: LocalDate,
+    val categoryId: UUID? = null,
+    val paymentMethodId: UUID? = null
 )

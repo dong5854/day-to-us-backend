@@ -19,5 +19,9 @@ data class FixedExpenseRequest(
     val frequency: Frequency,
 
     @field:NotNull
-    val startDate: LocalDate
+    val startDate: LocalDate,
+
+    val categoryId: java.util.UUID? = null,
+
+    val paymentMethodId: java.util.UUID? = null
 )

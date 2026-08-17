@@ -38,6 +38,12 @@ class FixedExpenseServiceTest {
     @Mock
     lateinit var userRepository: UserRepository
 
+    @Mock
+    lateinit var expenseCategoryRepository: com.dong.daytous.repository.ExpenseCategoryRepository
+
+    @Mock
+    lateinit var paymentMethodRepository: com.dong.daytous.repository.PaymentMethodRepository
+
     @InjectMocks
     lateinit var fixedExpenseService: FixedExpenseService
 

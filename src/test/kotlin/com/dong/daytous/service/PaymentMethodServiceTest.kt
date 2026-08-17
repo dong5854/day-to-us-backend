@@ -36,6 +36,9 @@ class PaymentMethodServiceTest {
     @Mock
     lateinit var userRepository: UserRepository
 
+    @Mock
+    lateinit var budgetEntryRepository: com.dong.daytous.repository.BudgetEntryRepository
+
     @InjectMocks
     lateinit var paymentMethodService: PaymentMethodService
 
