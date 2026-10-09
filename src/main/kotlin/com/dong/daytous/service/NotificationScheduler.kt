@@ -32,13 +32,12 @@ class NotificationScheduler(
         }
 
         val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
-        val tomorrow = today.plusDays(1)
 
-        sendFixedExpenseNotifications(today, tomorrow)
-        sendScheduleNotifications(today, tomorrow)
+        sendFixedExpenseNotifications(today)
+        sendScheduleNotifications(today)
     }
 
-    private fun sendFixedExpenseNotifications(today: LocalDate, tomorrow: LocalDate) {
+    private fun sendFixedExpenseNotifications(today: LocalDate) {
         val expensesBySpaceId = fixedExpenseRepository.findAllWithSharedSpace().groupBy { it.sharedSpace.id }
         val spaceIds = expensesBySpaceId.keys.filterNotNull()
         if (spaceIds.isEmpty()) return
@@ -52,31 +51,22 @@ class NotificationScheduler(
             for (expense in expenses) {
                 val nextPaymentDate = calculateNextPaymentDate(expense, today)
 
-                when (nextPaymentDate) {
-                    today -> {
-                        val title = "\uD83D\uDCB3 고정지출 결제일"
-                        val body = "${expense.description} ₩${expense.amount.toPlainString()} 결제일입니다"
-                        subscriptions.forEach { sub ->
-                            webPushService.sendNotification(sub, title, body, "/", "fixed-expense-${expense.id}")
-                        }
-                    }
-                    tomorrow -> {
-                        val title = "\uD83D\uDCB3 내일 고정지출 결제"
-                        val body = "내일 ${expense.description} ₩${expense.amount.toPlainString()} 결제 예정입니다"
-                        subscriptions.forEach { sub ->
-                            webPushService.sendNotification(sub, title, body, "/", "fixed-expense-${expense.id}")
-                        }
+                if (nextPaymentDate == today) {
+                    val title = "고정지출 결제일"
+                    val body = "${expense.description} ₩${expense.amount.toPlainString()} 결제일입니다"
+                    subscriptions.forEach { sub ->
+                        webPushService.sendNotification(sub, title, body, "/", "fixed-expense-${expense.id}")
                     }
                 }
             }
         }
     }
 
-    private fun sendScheduleNotifications(today: LocalDate, tomorrow: LocalDate) {
+    private fun sendScheduleNotifications(today: LocalDate) {
         val todayStart = LocalDateTime.of(today, LocalTime.MIN)
-        val tomorrowEnd = LocalDateTime.of(tomorrow, LocalTime.MAX)
+        val todayEnd = LocalDateTime.of(today, LocalTime.MAX)
 
-        val allSchedules = scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(todayStart, tomorrowEnd)
+        val allSchedules = scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(todayStart, todayEnd)
         if (allSchedules.isEmpty()) return
 
         val spaceIds = allSchedules.map { it.sharedSpace.id!! }.distinct()
@@ -86,10 +76,8 @@ class NotificationScheduler(
         for (schedule in allSchedules) {
             val subscriptions = subscriptionsBySpaceId[schedule.sharedSpace.id] ?: continue
             val time = schedule.startDateTime.format(timeFormatter)
-            val isToday = schedule.startDateTime.toLocalDate() == today
-
-            val title = if (isToday) "\uD83D\uDCC5 오늘 일정" else "\uD83D\uDCC5 내일 일정"
-            val body = if (isToday) "${schedule.title} ($time)" else "내일 ${schedule.title} ($time) 예정입니다"
+            val title = "오늘 일정"
+            val body = "${schedule.title} ($time)"
 
             subscriptions.forEach { sub ->
                 webPushService.sendNotification(sub, title, body, "/", "schedule-${schedule.id}")
@@ -112,17 +100,19 @@ class NotificationScheduler(
                     }
                 }
                 Frequency.MONTHLY -> {
-                    val monthsBetween = java.time.Period.between(date, today).toTotalMonths()
+                    var monthsBetween = java.time.Period.between(date, today).toTotalMonths()
                     date = date.plusMonths(monthsBetween)
                     while (date < today) {
-                        date = date.plusMonths(1)
+                        monthsBetween++
+                        date = expense.startDate.plusMonths(monthsBetween)
                     }
                 }
                 Frequency.YEARLY -> {
-                    val yearsBetween = java.time.Period.between(date, today).years.toLong()
+                    var yearsBetween = java.time.Period.between(date, today).years.toLong()
                     date = date.plusYears(yearsBetween)
                     while (date < today) {
-                        date = date.plusYears(1)
+                        yearsBetween++
+                        date = expense.startDate.plusYears(yearsBetween)
                     }
                 }
             }

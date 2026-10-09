@@ -224,6 +224,7 @@ class BudgetServiceTest {
 
             val result = budgetService.updateBudgetEntry(spaceId, entryId, request, email)
 
+            assertThat(result.id).isEqualTo(entryId)
             assertThat(result.description).isEqualTo("라떼")
             assertThat(result.amount).isEqualTo(6000.0)
         }
