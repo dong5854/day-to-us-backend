@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
@@ -156,6 +155,38 @@ class NotificationSchedulerTest {
         }
     }
 
+    @Test
+    fun `월말 결제일은 짧은 달을 지나도 원래 일자를 유지한다`() {
+        val expense = FixedExpense(
+            description = "월말 구독",
+            amount = BigDecimal("10000"),
+            frequency = Frequency.MONTHLY,
+            startDate = LocalDate.of(2026, 1, 31),
+            sharedSpace = sharedSpace,
+        )
+
+        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2026, 3, 28)))
+            .isEqualTo(LocalDate.of(2026, 3, 31))
+        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2026, 2, 28)))
+            .isEqualTo(LocalDate.of(2026, 2, 28))
+    }
+
+    @Test
+    fun `윤년 결제일은 평년을 지나도 윤년에 29일로 돌아온다`() {
+        val expense = FixedExpense(
+            description = "연간 구독",
+            amount = BigDecimal("10000"),
+            frequency = Frequency.YEARLY,
+            startDate = LocalDate.of(2020, 2, 29),
+            sharedSpace = sharedSpace,
+        )
+
+        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2024, 2, 28)))
+            .isEqualTo(LocalDate.of(2024, 2, 29))
+        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2025, 2, 28)))
+            .isEqualTo(LocalDate.of(2025, 2, 28))
+    }
+
     @Nested
     inner class SendDailyNotifications {
 
@@ -190,7 +221,7 @@ class NotificationSchedulerTest {
 
             verify(webPushService).sendNotification(
                 eq(subscription),
-                eq("\uD83D\uDCB3 고정지출 결제일"),
+                eq("고정지출 결제일"),
                 eq("넷플릭스 ₩17000 결제일입니다"),
                 eq("/"),
                 any(),
@@ -219,11 +250,34 @@ class NotificationSchedulerTest {
 
             verify(webPushService).sendNotification(
                 eq(subscription),
-                eq("\uD83D\uDCC5 오늘 일정"),
+                eq("오늘 일정"),
                 eq("데이트 (14:00)"),
                 eq("/"),
                 any(),
             )
+        }
+
+        @Test
+        fun `내일 고정지출은 미리 알리지 않고 일정도 오늘 범위만 조회한다`() {
+            whenever(webPushService.isEnabled()).thenReturn(true)
+            val today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+            val expense = FixedExpense(
+                description = "내일 결제",
+                amount = BigDecimal("17000"),
+                frequency = Frequency.MONTHLY,
+                startDate = today.plusDays(1),
+                sharedSpace = sharedSpace,
+            ).apply { id = UUID.randomUUID() }
+            whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(listOf(expense))
+            whenever(pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(any())).thenReturn(listOf(subscription))
+            whenever(scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(any(), any())).thenReturn(emptyList())
+
+            notificationScheduler.sendDailyNotifications()
+
+            verify(scheduleRepository).findByStartDateTimeBetweenWithSharedSpace(
+                today.atStartOfDay(), today.atTime(java.time.LocalTime.MAX),
+            )
+            verify(webPushService, never()).sendNotification(any(), any(), any(), any(), any())
         }
 
         @Test

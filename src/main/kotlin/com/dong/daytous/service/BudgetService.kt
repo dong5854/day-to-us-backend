@@ -111,6 +111,7 @@ class BudgetService(
             paymentMethod = paymentMethod,
             fixedExpenseId = request.fixedExpenseId,
         )
+        updatedEntry.id = existingEntry.id
         return budgetEntryRepository.save(updatedEntry)
     }
 
