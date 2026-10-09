@@ -27,6 +27,11 @@ class ExpenseCategoryService(
         email: String,
     ): ExpenseCategoryResponse {
         checkAccess(spaceId, email)
+
+        if (expenseCategoryRepository.existsByNameAndSharedSpaceId(request.name, spaceId)) {
+            throw IllegalArgumentException("이미 해당 공유 공간에 동일한 이름의 카테고리가 존재합니다.")
+        }
+
         val sharedSpace = sharedSpaceRepository.findById(spaceId)
             .orElseThrow { EntityNotFoundException("SharedSpace with id $spaceId not found") }
         val category = ExpenseCategory(name = request.name, sharedSpace = sharedSpace)

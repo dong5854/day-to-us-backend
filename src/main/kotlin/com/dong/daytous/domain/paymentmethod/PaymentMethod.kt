@@ -7,7 +7,12 @@ import java.util.Objects
 import java.util.UUID
 
 @Entity
-@Table(name = "payment_method")
+@Table(
+    name = "payment_method",
+    uniqueConstraints = [
+        UniqueConstraint(columnNames = ["name", "shared_space_id"])
+    ]
+)
 class PaymentMethod(
     @Column(nullable = false)
     val name: String,

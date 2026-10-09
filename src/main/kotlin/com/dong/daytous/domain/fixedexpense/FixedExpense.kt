@@ -33,6 +33,14 @@ class FixedExpense(
     val startDate: LocalDate, // 시작일 (결제일 계산 기준)
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    val category: com.dong.daytous.domain.category.ExpenseCategory? = null,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_method_id")
+    val paymentMethod: com.dong.daytous.domain.paymentmethod.PaymentMethod? = null,
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shared_space_id", nullable = false)
     val sharedSpace: SharedSpace,
 ) {

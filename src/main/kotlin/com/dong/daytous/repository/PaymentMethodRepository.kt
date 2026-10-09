@@ -9,4 +9,5 @@ import java.util.UUID
 interface PaymentMethodRepository : JpaRepository<PaymentMethod, UUID> {
     fun findBySharedSpaceId(spaceId: UUID): List<PaymentMethod>
     fun findByIdAndSharedSpaceId(id: UUID, spaceId: UUID): PaymentMethod?
+    fun existsByNameAndSharedSpaceId(name: String, spaceId: UUID): Boolean
 }
