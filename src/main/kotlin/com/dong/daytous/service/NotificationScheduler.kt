@@ -52,8 +52,10 @@ class NotificationScheduler(
                 val nextPaymentDate = calculateNextPaymentDate(expense, today)
 
                 if (nextPaymentDate == today) {
-                    val title = "고정지출 결제일"
-                    val body = "${expense.description} ₩${expense.amount.toPlainString()} 결제일입니다"
+                    val income = expense.type == com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME
+                    val title = if (income) "고정수입 입금 예정일" else "고정지출 결제일"
+                    val action = if (income) "입금 예정일" else "결제일"
+                    val body = "${expense.description} ₩${expense.amount.toPlainString()} ${action}입니다"
                     subscriptions.forEach { sub ->
                         webPushService.sendNotification(sub, title, body, "/", "fixed-expense-${expense.id}")
                     }

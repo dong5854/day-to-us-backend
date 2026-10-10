@@ -10,6 +10,7 @@ fun FixedExpense.toResponse(): FixedExpenseResponse {
         frequency = this.frequency,
         startDate = this.startDate,
         categoryId = this.category?.id,
-        paymentMethodId = this.paymentMethod?.id
+        paymentMethodId = this.paymentMethod?.id,
+        type = this.type
     )
 }

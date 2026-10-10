@@ -51,6 +51,7 @@ class FixedExpenseService(
             FixedExpense(
                 description = request.description,
                 amount = request.amount,
+                type = request.type ?: com.dong.daytous.domain.fixedexpense.FixedTransactionType.EXPENSE,
                 frequency = request.frequency,
                 startDate = request.startDate,
                 category = category,
@@ -102,6 +103,7 @@ class FixedExpenseService(
             FixedExpense(
                 description = request.description,
                 amount = request.amount,
+                type = request.type ?: expense.type,
                 frequency = request.frequency,
                 startDate = request.startDate,
                 category = category,

@@ -92,6 +92,30 @@ class FixedExpenseServiceTest {
         }
 
         @Test
+        fun `고정 수입을 생성하고 유형을 반환한다`() {
+            val request = FixedExpenseRequest(
+                description = "급여",
+                type = com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME,
+                amount = BigDecimal("500000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+            )
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(sharedSpaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace))
+            whenever(fixedExpenseRepository.save(any<FixedExpense>())).thenAnswer {
+                (it.arguments[0] as FixedExpense).apply { id = UUID.randomUUID() }
+            }
+
+            val result = fixedExpenseService.createFixedExpense(spaceId, request, email)
+
+            assertThat(result.description).isEqualTo("급여")
+            assertThat(result.amount).isEqualByComparingTo(BigDecimal("500000"))
+            assertThat(result.type).isEqualTo(com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME)
+            assertThat(result.frequency).isEqualTo(Frequency.MONTHLY)
+        }
+
+        @Test
         fun `주간 고정 지출을 생성할 수 있다`() {
             val request = FixedExpenseRequest(
                 description = "주간 장보기",
@@ -199,6 +223,39 @@ class FixedExpenseServiceTest {
 
             assertThat(result.id).isEqualTo(expenseId)
             assertThat(result.description).isEqualTo("월세 인상")
+            assertThat(result.amount).isEqualByComparingTo(BigDecimal("550000"))
+            assertThat(result.startDate).isEqualTo(LocalDate.of(2024, 3, 1))
+        }
+
+        @Test
+        fun `고정 수입 수정 시 유형과 식별자를 유지한다`() {
+            val existingExpense = FixedExpense(
+                description = "급여",
+                type = com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME,
+                amount = BigDecimal("500000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+                sharedSpace = sharedSpace,
+            ).apply { id = expenseId }
+
+            val request = FixedExpenseRequest(
+                description = "급여 인상",
+                amount = BigDecimal("550000"),
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 3, 1),
+            )
+
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(fixedExpenseRepository.findById(expenseId)).thenReturn(Optional.of(existingExpense))
+            whenever(fixedExpenseRepository.save(any<FixedExpense>())).thenAnswer {
+                it.arguments[0] as FixedExpense
+            }
+
+            val result = fixedExpenseService.updateFixedExpense(spaceId, expenseId, request, email)
+
+            assertThat(result.type).isEqualTo(com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME)
+            assertThat(result.id).isEqualTo(expenseId)
+            assertThat(result.description).isEqualTo("급여 인상")
             assertThat(result.amount).isEqualByComparingTo(BigDecimal("550000"))
             assertThat(result.startDate).isEqualTo(LocalDate.of(2024, 3, 1))
         }
