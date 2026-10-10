@@ -89,6 +89,7 @@ class FixedExpenseServiceTest {
             assertThat(result.description).isEqualTo("월세")
             assertThat(result.amount).isEqualByComparingTo(BigDecimal("500000"))
             assertThat(result.frequency).isEqualTo(Frequency.MONTHLY)
+            assertThat(result.autoPostFrom).isEqualTo(LocalDate.now(java.time.ZoneId.of("Asia/Seoul")))
         }
 
         @Test
@@ -96,6 +97,7 @@ class FixedExpenseServiceTest {
             val request = FixedExpenseRequest(
                 description = "급여",
                 type = com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME,
+                autoPostFrom = LocalDate.of(2026, 10, 8),
                 amount = BigDecimal("500000"),
                 frequency = Frequency.MONTHLY,
                 startDate = LocalDate.of(2024, 1, 1),
@@ -112,6 +114,7 @@ class FixedExpenseServiceTest {
             assertThat(result.description).isEqualTo("급여")
             assertThat(result.amount).isEqualByComparingTo(BigDecimal("500000"))
             assertThat(result.type).isEqualTo(com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME)
+            assertThat(result.autoPostFrom).isEqualTo(LocalDate.of(2026, 10, 8))
             assertThat(result.frequency).isEqualTo(Frequency.MONTHLY)
         }
 
@@ -211,6 +214,7 @@ class FixedExpenseServiceTest {
                 amount = BigDecimal("550000"),
                 frequency = Frequency.MONTHLY,
                 startDate = LocalDate.of(2024, 3, 1),
+                autoPostFrom = LocalDate.of(2026, 11, 1),
             )
 
             whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
@@ -225,6 +229,7 @@ class FixedExpenseServiceTest {
             assertThat(result.description).isEqualTo("월세 인상")
             assertThat(result.amount).isEqualByComparingTo(BigDecimal("550000"))
             assertThat(result.startDate).isEqualTo(LocalDate.of(2024, 3, 1))
+            assertThat(result.autoPostFrom).isEqualTo(existingExpense.autoPostFrom)
         }
 
         @Test

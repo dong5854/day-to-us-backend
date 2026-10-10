@@ -14,5 +14,6 @@ data class FixedExpenseResponse(
     val startDate: LocalDate,
     val categoryId: UUID? = null,
     val paymentMethodId: UUID? = null,
-    val type: FixedTransactionType = FixedTransactionType.EXPENSE
+    val type: FixedTransactionType = FixedTransactionType.EXPENSE,
+    val autoPostFrom: LocalDate = LocalDate.of(2026, 6, 1)
 )

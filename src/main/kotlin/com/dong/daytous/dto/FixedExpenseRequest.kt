@@ -26,5 +26,7 @@ data class FixedExpenseRequest(
 
     val paymentMethodId: java.util.UUID? = null,
 
-    val type: FixedTransactionType? = null
+    val type: FixedTransactionType? = null,
+
+    val autoPostFrom: LocalDate? = null
 )
