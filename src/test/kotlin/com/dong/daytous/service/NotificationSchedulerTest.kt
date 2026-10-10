@@ -229,6 +229,35 @@ class NotificationSchedulerTest {
         }
 
         @Test
+        fun `고정수입 예정일 당일 입금 안내를 발송한다`() {
+            whenever(webPushService.isEnabled()).thenReturn(true)
+
+            val today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+            val expense = FixedExpense(
+                description = "급여",
+                type = com.dong.daytous.domain.fixedexpense.FixedTransactionType.INCOME,
+                amount = BigDecimal("17000"),
+                frequency = Frequency.MONTHLY,
+                startDate = today,
+                sharedSpace = sharedSpace,
+            ).apply { id = UUID.randomUUID() }
+
+            whenever(fixedExpenseRepository.findAllWithSharedSpace()).thenReturn(listOf(expense))
+            whenever(pushSubscriptionRepository.findByUserSharedSpaceIdInWithUser(any())).thenReturn(listOf(subscription))
+            whenever(scheduleRepository.findByStartDateTimeBetweenWithSharedSpace(any(), any())).thenReturn(emptyList())
+
+            notificationScheduler.sendDailyNotifications()
+
+            verify(webPushService).sendNotification(
+                eq(subscription),
+                eq("고정수입 입금 예정일"),
+                eq("급여 ₩17000 입금 예정일입니다"),
+                eq("/"),
+                any(),
+            )
+        }
+
+        @Test
         fun `일정 당일 알림을 발송한다`() {
             whenever(webPushService.isEnabled()).thenReturn(true)
 

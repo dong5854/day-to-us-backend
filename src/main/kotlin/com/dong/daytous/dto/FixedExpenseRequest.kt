@@ -1,6 +1,7 @@
 package com.dong.daytous.dto
 
 import com.dong.daytous.domain.fixedexpense.Frequency
+import com.dong.daytous.domain.fixedexpense.FixedTransactionType
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -23,5 +24,7 @@ data class FixedExpenseRequest(
 
     val categoryId: java.util.UUID? = null,
 
-    val paymentMethodId: java.util.UUID? = null
+    val paymentMethodId: java.util.UUID? = null,
+
+    val type: FixedTransactionType? = null
 )

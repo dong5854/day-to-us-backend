@@ -43,6 +43,10 @@ class FixedExpense(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shared_space_id", nullable = false)
     val sharedSpace: SharedSpace,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    val type: FixedTransactionType = FixedTransactionType.EXPENSE,
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
