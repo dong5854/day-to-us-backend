@@ -47,6 +47,12 @@ class FixedExpense(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     val type: FixedTransactionType = FixedTransactionType.EXPENSE,
+
+    @Column(nullable = false)
+    // Automatic posting begins with the June 2026 accounting period.
+    val autoPostFrom: LocalDate = LocalDate.of(2026, 6, 1),
+
+    var postedThrough: LocalDate? = null,
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)

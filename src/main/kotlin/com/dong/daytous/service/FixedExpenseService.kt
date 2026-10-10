@@ -104,6 +104,8 @@ class FixedExpenseService(
                 description = request.description,
                 amount = request.amount,
                 type = request.type ?: expense.type,
+                autoPostFrom = expense.autoPostFrom,
+                postedThrough = expense.postedThrough,
                 frequency = request.frequency,
                 startDate = request.startDate,
                 category = category,
