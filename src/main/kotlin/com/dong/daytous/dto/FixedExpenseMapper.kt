@@ -11,6 +11,7 @@ fun FixedExpense.toResponse(): FixedExpenseResponse {
         startDate = this.startDate,
         categoryId = this.category?.id,
         paymentMethodId = this.paymentMethod?.id,
-        type = this.type
+        type = this.type,
+        autoPostFrom = this.autoPostFrom
     )
 }

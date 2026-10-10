@@ -12,6 +12,8 @@ import com.dong.daytous.repository.UserRepository
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -52,6 +54,7 @@ class FixedExpenseService(
                 description = request.description,
                 amount = request.amount,
                 type = request.type ?: com.dong.daytous.domain.fixedexpense.FixedTransactionType.EXPENSE,
+                autoPostFrom = request.autoPostFrom ?: LocalDate.now(ZoneId.of("Asia/Seoul")),
                 frequency = request.frequency,
                 startDate = request.startDate,
                 category = category,

@@ -83,6 +83,24 @@ class RecurringBudgetIntegrationTest {
     }
 
     @Test
+    fun `늦게 등록해도 지정한 자동 반영 시작일 이후의 회차만 생성한다`() {
+        val space = spaces.save(SharedSpace(name = "반영 시작일"))
+        val included = sources.save(FixedExpense("지난 지출", BigDecimal("1000"), Frequency.MONTHLY,
+            LocalDate.of(2026, 1, 8), sharedSpace = space, autoPostFrom = LocalDate.of(2026, 10, 8)))
+        val excluded = sources.save(FixedExpense("다음 달부터", BigDecimal("2000"), Frequency.MONTHLY,
+            LocalDate.of(2026, 1, 8), sharedSpace = space, autoPostFrom = LocalDate.of(2026, 10, 10)))
+        val today = LocalDate.of(2026, 10, 10)
+        repeat(2) {
+            service.postDueEntries(included.id!!, today)
+            service.postDueEntries(excluded.id!!, today)
+        }
+        val result = entries.findBySharedSpaceId(space.id!!)
+        assertThat(result).hasSize(1)
+        assertThat(result.single().date).isEqualTo(LocalDate.of(2026, 10, 8))
+        assertThat(result.single().fixedExpenseId).isEqualTo(included.id)
+    }
+
+    @Test
     fun `생성 내역의 날짜와 금액 수정 및 삭제 후에도 회차를 다시 만들지 않는다`() {
         val space = spaces.save(SharedSpace(name = "사후 수정"))
         val email = "${UUID.randomUUID()}@test.com"
