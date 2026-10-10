@@ -109,7 +109,7 @@ class BudgetService(
             date = request.date,
             category = category,
             paymentMethod = paymentMethod,
-            fixedExpenseId = request.fixedExpenseId,
+            fixedExpenseId = existingEntry.fixedExpenseId ?: request.fixedExpenseId,
         )
         updatedEntry.id = existingEntry.id
         return budgetEntryRepository.save(updatedEntry)
