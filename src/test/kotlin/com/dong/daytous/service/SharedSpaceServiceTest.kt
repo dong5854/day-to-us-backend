@@ -52,7 +52,7 @@ class SharedSpaceServiceTest {
 
         @Test
         fun `공유 공간을 생성할 수 있다`() {
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
             whenever(sharedSpaceRepository.save(any<SharedSpace>())).thenAnswer {
                 (it.arguments[0] as SharedSpace).apply { id = UUID.randomUUID() }
             }
@@ -67,7 +67,7 @@ class SharedSpaceServiceTest {
         fun `이미 공유 공간에 속한 사용자가 생성하면 예외가 발생한다`() {
             val existingSpace = SharedSpace(name = "기존 공간").apply { id = UUID.randomUUID() }
             user.sharedSpace = existingSpace
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
 
             assertThatThrownBy {
                 sharedSpaceService.createSharedSpace("새 공간", email)
@@ -77,7 +77,7 @@ class SharedSpaceServiceTest {
 
         @Test
         fun `존재하지 않는 사용자로 생성하면 예외가 발생한다`() {
-            whenever(userRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty())
+            whenever(userRepository.findByEmailForUpdate("unknown@test.com")).thenReturn(Optional.empty())
 
             assertThatThrownBy {
                 sharedSpaceService.createSharedSpace("공간", "unknown@test.com")
@@ -91,8 +91,8 @@ class SharedSpaceServiceTest {
         @Test
         fun `초대 코드로 공유 공간에 참가할 수 있다`() {
             val space = SharedSpace(name = "커플 공간", inviteCode = "abc12345").apply { id = UUID.randomUUID() }
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
-            whenever(sharedSpaceRepository.findByInviteCode("abc12345")).thenReturn(Optional.of(space))
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
+            whenever(sharedSpaceRepository.findByInviteCodeForUpdate("abc12345")).thenReturn(Optional.of(space))
 
             val result = sharedSpaceService.joinSharedSpace("abc12345", email)
 
@@ -104,7 +104,7 @@ class SharedSpaceServiceTest {
         fun `이미 공유 공간에 속한 사용자가 참가하면 예외가 발생한다`() {
             val existingSpace = SharedSpace(name = "기존 공간").apply { id = UUID.randomUUID() }
             user.sharedSpace = existingSpace
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
 
             assertThatThrownBy {
                 sharedSpaceService.joinSharedSpace("abc12345", email)
@@ -114,8 +114,8 @@ class SharedSpaceServiceTest {
 
         @Test
         fun `잘못된 초대 코드로 참가하면 예외가 발생한다`() {
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
-            whenever(sharedSpaceRepository.findByInviteCode("invalid")).thenReturn(Optional.empty())
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
+            whenever(sharedSpaceRepository.findByInviteCodeForUpdate("invalid")).thenReturn(Optional.empty())
 
             assertThatThrownBy {
                 sharedSpaceService.joinSharedSpace("invalid", email)
@@ -129,9 +129,10 @@ class SharedSpaceServiceTest {
             val user1 = User(id = 2L, name = "User1", email = "u1@test.com", role = Role.USER, provider = "google", providerId = "1", sharedSpace = space)
             val user2 = User(id = 3L, name = "User2", email = "u2@test.com", role = Role.USER, provider = "google", providerId = "2", sharedSpace = space)
             space.users.addAll(listOf(user1, user2))
+            whenever(userRepository.countBySharedSpaceId(space.id!!)).thenReturn(2L)
 
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
-            whenever(sharedSpaceRepository.findByInviteCode("abc12345")).thenReturn(Optional.of(space))
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
+            whenever(sharedSpaceRepository.findByInviteCodeForUpdate("abc12345")).thenReturn(Optional.of(space))
 
             assertThatThrownBy {
                 sharedSpaceService.joinSharedSpace("abc12345", email)
@@ -144,9 +145,10 @@ class SharedSpaceServiceTest {
             val space = SharedSpace(name = "커플 공간", inviteCode = "abc12345").apply { id = UUID.randomUUID() }
             val existingUser = User(id = 2L, name = "Partner", email = "partner@test.com", role = Role.USER, provider = "google", providerId = "1", sharedSpace = space)
             space.users.add(existingUser)
+            whenever(userRepository.countBySharedSpaceId(space.id!!)).thenReturn(1L)
 
-            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
-            whenever(sharedSpaceRepository.findByInviteCode("abc12345")).thenReturn(Optional.of(space))
+            whenever(userRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(user))
+            whenever(sharedSpaceRepository.findByInviteCodeForUpdate("abc12345")).thenReturn(Optional.of(space))
 
             val result = sharedSpaceService.joinSharedSpace("abc12345", email)
 

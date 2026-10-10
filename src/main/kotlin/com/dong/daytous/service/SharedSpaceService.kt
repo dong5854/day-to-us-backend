@@ -22,7 +22,7 @@ class SharedSpaceService(
     ): SharedSpaceResponse {
         val user =
             userRepository
-                .findByEmail(email)
+                .findByEmailForUpdate(email)
                 .orElseThrow { EntityNotFoundException("User not found") }
 
         if (user.sharedSpace != null) {
@@ -44,7 +44,7 @@ class SharedSpaceService(
     ): SharedSpaceResponse {
         val user =
             userRepository
-                .findByEmail(email)
+                .findByEmailForUpdate(email)
                 .orElseThrow { EntityNotFoundException("User not found") }
 
         if (user.sharedSpace != null) {
@@ -53,10 +53,10 @@ class SharedSpaceService(
 
         val space =
             sharedSpaceRepository
-                .findByInviteCode(inviteCode)
+                .findByInviteCodeForUpdate(inviteCode)
                 .orElseThrow { EntityNotFoundException("Invalid invite code") }
 
-        if (space.users.size >= 2) {
+        if (userRepository.countBySharedSpaceId(space.id!!) >= 2) {
             throw IllegalStateException("Shared space is full")
         }
 
