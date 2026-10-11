@@ -49,6 +49,14 @@ class FixedExpenseController(
         return ResponseEntity.ok(updatedExpense)
     }
 
+    @PostMapping("/{expenseId}/preview")
+    fun previewUpdate(
+        @PathVariable spaceId: UUID,
+        @PathVariable expenseId: UUID,
+        @Valid @RequestBody request: FixedExpenseRequest,
+        principal: Principal,
+    ) = fixedExpenseService.previewUpdate(spaceId, expenseId, request, principal.name)
+
     @DeleteMapping("/{expenseId}")
     fun deleteFixedExpense(
         @PathVariable spaceId: UUID,

@@ -81,6 +81,22 @@ class FixedExpenseControllerTest {
     }
 
     @Test
+    fun `POST 변경 미리보기는 추가 삭제 보존 건수와 확인 토큰을 반환한다`() {
+        val id = UUID.randomUUID()
+        val request = FixedExpenseRequest("월세", BigDecimal("500000"), Frequency.MONTHLY, LocalDate.of(2026, 8, 8))
+        whenever(fixedExpenseService.previewUpdate(eq(spaceId), eq(id), any(), eq(email)))
+            .thenReturn(com.dong.daytous.dto.RecurringPreview(2, 1, 3, "preview-token"))
+        mockMvc.perform(post("/shared-spaces/$spaceId/fixed-expenses/$id/preview")
+            .with(user(email)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(jsonMapper.writeValueAsString(request)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.added").value(2))
+            .andExpect(jsonPath("$.deleted").value(1))
+            .andExpect(jsonPath("$.preserved").value(3))
+            .andExpect(jsonPath("$.token").value("preview-token"))
+    }
+
+    @Test
     fun `POST 고정 지출을 생성할 수 있다`() {
         val request = FixedExpenseRequest(
             description = "월세",

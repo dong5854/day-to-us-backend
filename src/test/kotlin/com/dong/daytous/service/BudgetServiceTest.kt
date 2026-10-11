@@ -48,6 +48,9 @@ class BudgetServiceTest {
     @InjectMocks
     lateinit var budgetService: BudgetService
 
+    @Mock
+    lateinit var recurringBudgetService: RecurringBudgetService
+
     private lateinit var sharedSpace: SharedSpace
     private lateinit var user: User
     private val spaceId = UUID.randomUUID()

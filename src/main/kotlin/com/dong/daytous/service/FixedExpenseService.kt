@@ -3,6 +3,7 @@ package com.dong.daytous.service
 import com.dong.daytous.domain.fixedexpense.FixedExpense
 import com.dong.daytous.dto.FixedExpenseRequest
 import com.dong.daytous.dto.FixedExpenseResponse
+import com.dong.daytous.dto.RecurringPreview
 import com.dong.daytous.dto.toResponse
 import com.dong.daytous.repository.ExpenseCategoryRepository
 import com.dong.daytous.repository.FixedExpenseRepository
@@ -79,6 +80,16 @@ class FixedExpenseService(
     }
 
     @Transactional
+    fun previewUpdate(spaceId: UUID, expenseId: UUID, request: FixedExpenseRequest, email: String): RecurringPreview {
+        checkAccess(spaceId, email)
+        val expense = fixedExpenseRepository.findById(expenseId)
+            .filter { it.sharedSpace.id == spaceId }
+            .orElseThrow { EntityNotFoundException("FixedExpense not found") }
+        recurringBudgetService.lockAndTrack(expenseId)
+        return recurringBudgetService.preview(expense, request, LocalDate.now(ZoneId.of("Asia/Seoul")))
+    }
+
+    @Transactional
     fun updateFixedExpense(
         spaceId: UUID,
         expenseId: UUID,
@@ -105,6 +116,8 @@ class FixedExpenseService(
                 .orElseThrow { EntityNotFoundException("PaymentMethod not found or does not belong to this space") }
         }
 
+        val scheduleChanged = expense.startDate != request.startDate || expense.frequency != request.frequency
+        if (scheduleChanged) recurringBudgetService.lockAndTrack(expenseId)
         val updatedExpense =
             FixedExpense(
                 description = request.description,
@@ -112,6 +125,7 @@ class FixedExpenseService(
                 type = request.type ?: expense.type,
                 autoPostFrom = expense.autoPostFrom,
                 postedThrough = expense.postedThrough,
+                occurrencesTracked = expense.occurrencesTracked,
                 frequency = request.frequency,
                 startDate = request.startDate,
                 category = category,
@@ -121,6 +135,9 @@ class FixedExpenseService(
                 id = expense.id
             }
 
+        if (scheduleChanged) {
+            recurringBudgetService.reconcile(expense, updatedExpense, request, LocalDate.now(ZoneId.of("Asia/Seoul")))
+        }
         return fixedExpenseRepository.save(updatedExpense).toResponse()
     }
 

@@ -28,5 +28,7 @@ data class FixedExpenseRequest(
 
     val type: FixedTransactionType? = null,
 
-    val autoPostFrom: LocalDate? = null
+    val autoPostFrom: LocalDate? = null,
+
+    val reconciliationToken: String? = null
 )
