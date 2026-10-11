@@ -9,6 +9,11 @@ import java.util.UUID
 
 @Repository
 interface BudgetEntryRepository : JpaRepository<BudgetEntry, UUID> {
+    fun findByFixedExpenseId(fixedExpenseId: UUID): List<BudgetEntry>
+
+    @Query("SELECT b.fixedExpenseId FROM BudgetEntry b WHERE b.id = :entryId")
+    fun findFixedExpenseIdById(entryId: UUID): UUID?
+
     fun findBySharedSpaceId(spaceId: UUID): List<BudgetEntry>
 
     fun findBySharedSpaceIdAndDateBetween(

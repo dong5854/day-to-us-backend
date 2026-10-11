@@ -20,6 +20,7 @@ class BudgetService(
     private val userRepository: UserRepository,
     private val expenseCategoryRepository: ExpenseCategoryRepository,
     private val paymentMethodRepository: PaymentMethodRepository,
+    private val recurringBudgetService: RecurringBudgetService,
 ) {
     @Transactional(readOnly = true)
     fun getAllBudgetEntriesForSpace(
@@ -92,6 +93,8 @@ class BudgetService(
         request: BudgetEntryRequest,
         email: String,
     ): BudgetEntry {
+        checkAccess(spaceId, email)
+        budgetEntryRepository.findFixedExpenseIdById(entryId)?.let { recurringBudgetService.lockAndTrack(it) }
         val existingEntry = getBudgetEntryById(spaceId, entryId, email)
 
         val category = request.categoryId?.let {
@@ -112,6 +115,7 @@ class BudgetService(
             fixedExpenseId = existingEntry.fixedExpenseId ?: request.fixedExpenseId,
         )
         updatedEntry.id = existingEntry.id
+        recurringBudgetService.protectEntry(entryId)
         return budgetEntryRepository.save(updatedEntry)
     }
 
@@ -121,7 +125,10 @@ class BudgetService(
         entryId: UUID,
         email: String,
     ) {
+        checkAccess(spaceId, email)
+        budgetEntryRepository.findFixedExpenseIdById(entryId)?.let { recurringBudgetService.lockAndTrack(it) }
         val entry = getBudgetEntryById(spaceId, entryId, email)
+        recurringBudgetService.protectEntry(entryId, deleted = true)
         budgetEntryRepository.delete(entry)
     }
 

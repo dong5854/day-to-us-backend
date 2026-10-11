@@ -53,6 +53,8 @@ class FixedExpense(
     val autoPostFrom: LocalDate = LocalDate.of(2026, 6, 1),
 
     var postedThrough: LocalDate? = null,
+    @Column(nullable = false)
+    var occurrencesTracked: Boolean = true,
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
