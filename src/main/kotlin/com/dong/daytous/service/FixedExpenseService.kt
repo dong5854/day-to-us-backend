@@ -23,6 +23,7 @@ class FixedExpenseService(
     private val userRepository: UserRepository,
     private val expenseCategoryRepository: ExpenseCategoryRepository,
     private val paymentMethodRepository: PaymentMethodRepository,
+    private val recurringBudgetService: RecurringBudgetService,
 ) {
     @Transactional
     fun createFixedExpense(
@@ -31,6 +32,7 @@ class FixedExpenseService(
         email: String,
     ): FixedExpenseResponse {
         checkAccess(spaceId, email)
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
 
         val sharedSpace =
             sharedSpaceRepository
@@ -54,7 +56,7 @@ class FixedExpenseService(
                 description = request.description,
                 amount = request.amount,
                 type = request.type ?: com.dong.daytous.domain.fixedexpense.FixedTransactionType.EXPENSE,
-                autoPostFrom = request.autoPostFrom ?: LocalDate.now(ZoneId.of("Asia/Seoul")),
+                autoPostFrom = request.autoPostFrom ?: today,
                 frequency = request.frequency,
                 startDate = request.startDate,
                 category = category,
@@ -63,6 +65,7 @@ class FixedExpenseService(
             )
 
         val savedExpense = fixedExpenseRepository.save(newExpense)
+        recurringBudgetService.postDueEntries(savedExpense.id!!, today)
         return savedExpense.toResponse()
     }
 
