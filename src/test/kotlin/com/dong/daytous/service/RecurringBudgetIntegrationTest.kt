@@ -25,11 +25,37 @@ import java.util.UUID
 class RecurringBudgetIntegrationTest {
     @Autowired lateinit var service: RecurringBudgetService
     @Autowired lateinit var budgetService: BudgetService
+    @Autowired lateinit var fixedExpenseService: FixedExpenseService
     @Autowired lateinit var sources: FixedExpenseRepository
     @Autowired lateinit var entries: BudgetEntryRepository
     @Autowired lateinit var spaces: SharedSpaceRepository
     @Autowired lateinit var users: UserRepository
     @Autowired lateinit var em: EntityManager
+
+    @Test
+    fun `등록 즉시 지난 수입과 지출을 반영하고 배치는 중복 없이 미래 회차를 보완한다`() {
+        val today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+        val space = spaces.save(SharedSpace(name = "즉시 반영"))
+        val email = "${UUID.randomUUID()}@test.com"
+        users.save(User(name = "Test", email = email, role = Role.USER, provider = "google",
+            providerId = email, sharedSpace = space))
+        for (type in FixedTransactionType.entries) {
+            val created = fixedExpenseService.createFixedExpense(space.id!!,
+                com.dong.daytous.dto.FixedExpenseRequest("주간 항목", BigDecimal("1000"),
+                    Frequency.WEEKLY, today.minusWeeks(2), type = type, autoPostFrom = today.minusWeeks(2)), email)
+            val posted = entries.findBySharedSpaceId(space.id!!).filter { it.fixedExpenseId == created.id }
+            assertThat(posted.map { it.date }).containsExactlyInAnyOrder(today.minusWeeks(2), today.minusWeeks(1), today)
+            assertThat(posted.map { it.amount }).containsOnly(if (type == FixedTransactionType.INCOME) 1000.0 else -1000.0)
+            service.postDueEntries(created.id, today)
+            assertThat(entries.findBySharedSpaceId(space.id!!).filter { it.fixedExpenseId == created.id }).hasSize(3)
+            service.postDueEntries(created.id, today.plusWeeks(1))
+            assertThat(entries.findBySharedSpaceId(space.id!!).filter { it.fixedExpenseId == created.id }).hasSize(4)
+        }
+        val future = fixedExpenseService.createFixedExpense(space.id!!,
+            com.dong.daytous.dto.FixedExpenseRequest("미래 항목", BigDecimal("1000"), Frequency.MONTHLY,
+                today.plusDays(1), autoPostFrom = today), email)
+        assertThat(entries.findBySharedSpaceId(space.id!!).filter { it.fixedExpenseId == future.id }).isEmpty()
+    }
 
     @Test
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
