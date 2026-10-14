@@ -1,0 +1,58 @@
+# Run manually; deliberately excluded from the deployed Kustomization.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: postgres-restore-check-
+  namespace: day-to-us
+spec:
+  ttlSecondsAfterFinished: 3600
+  activeDeadlineSeconds: 600
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+      containers:
+        - name: restore-check
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              umask 077
+              archive=$(find /backup -maxdepth 1 -type f -name 'daytous-*.dump' | sort | tail -n 1)
+              test -n "$archive"
+              initdb -D /scratch/data -U postgres --auth=trust >/dev/null
+              trap 'pg_ctl -D /scratch/data -m immediate stop >/dev/null 2>&1 || true' EXIT
+              pg_ctl -D /scratch/data -l /scratch/postgres.log -o "-c listen_addresses='' -k /scratch -p 5433" -w start
+              createdb -h /scratch -p 5433 -U postgres restore_check
+              pg_restore -h /scratch -p 5433 -U postgres -d restore_check --exit-on-error --no-owner --no-privileges "$archive"
+              psql -h /scratch -p 5433 -U postgres -d restore_check -v ON_ERROR_STOP=1 -c "SELECT count(*) AS restored_tables FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';"
+              echo "Restore verified: $(basename "$archive")"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: backup
+              mountPath: /backup
+              readOnly: true
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        - name: backup
+          persistentVolumeClaim:
+            claimName: postgres-backup-pvc
+        - name: scratch
+          emptyDir: {}
