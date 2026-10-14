@@ -6,5 +6,6 @@ resources:
   - service.yaml
   - httproute.yaml
   - db.yaml
+  - db-backup.yaml
 
 namespace: day-to-us
