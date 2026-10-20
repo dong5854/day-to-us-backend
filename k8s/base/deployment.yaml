@@ -47,7 +47,7 @@ spec:
         - name: SERVER_FORWARD_HEADERS_STRATEGY
           value: "native"
         - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
-          value: "DEBUG"
+          value: "INFO"
         - name: SERVER_SERVLET_SESSION_COOKIE_SAMESITE
           value: "none"
         - name: SERVER_SERVLET_SESSION_COOKIE_SECURE

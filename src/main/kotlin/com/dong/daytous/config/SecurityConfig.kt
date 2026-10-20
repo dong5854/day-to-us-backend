@@ -35,6 +35,7 @@ class SecurityConfig(
                         "/v3/api-docs/**",
                         "/oauth2/**",
                         "/push/vapid-key",
+                        "/auth/login/exchange",
                     ).permitAll()
                     .anyRequest()
                     .authenticated()
