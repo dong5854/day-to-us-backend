@@ -4,6 +4,9 @@ import com.dong.daytous.config.encrypt.TokenEncryptor
 import com.dong.daytous.domain.user.GoogleToken
 import com.dong.daytous.repository.GoogleTokenRepository
 import com.dong.daytous.repository.UserRepository
+import com.dong.daytous.service.LoginCodeService
+import org.springframework.http.HttpHeaders
+import org.springframework.http.ResponseCookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
@@ -20,7 +23,7 @@ import java.time.ZoneId
 
 @Component
 class OAuth2AuthenticationSuccessHandler(
-    private val jwtTokenProvider: JwtTokenProvider,
+    private val loginCodes: LoginCodeService,
     private val userRepository: UserRepository,
     private val googleTokenRepository: GoogleTokenRepository,
     private val authorizedClientService: OAuth2AuthorizedClientService,
@@ -46,11 +49,17 @@ class OAuth2AuthenticationSuccessHandler(
 
         saveGoogleTokens(oAuth2Token, user.id)
 
-        val token = jwtTokenProvider.createToken(user)
+        val (code, binding) = loginCodes.issue(user.id)
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(LoginCodeService.COOKIE_NAME, binding)
+            .httpOnly(true).secure(request.isSecure).sameSite("Lax")
+            .path(LoginCodeService.COOKIE_PATH).maxAge(LoginCodeService.TTL_SECONDS).build().toString())
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store")
+        response.setHeader("Referrer-Policy", "no-referrer")
         val targetUrl =
             UriComponentsBuilder
                 .fromUriString(redirectUri)
-                .queryParam("token", token)
+                .replaceQuery(null)
+                .fragment("code=$code")
                 .build()
                 .encode()
                 .toUriString()

@@ -19,12 +19,15 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
-@WebMvcTest(BudgetController::class)
+@WebMvcTest(BudgetController::class, LoginController::class)
 @Import(SecurityConfig::class)
 class SecurityIntegrationTest {
+    @MockitoBean
+    lateinit var loginCodeService: com.dong.daytous.service.LoginCodeService
 
     @Autowired
     lateinit var mockMvc: MockMvc
@@ -57,6 +60,14 @@ class SecurityIntegrationTest {
                     invocation.getArgument<HttpServletResponse>(1),
                 )
             }
+    }
+
+    @Test
+    fun `로그인 코드 교환은 JWT 없이 접근할 수 있다`() {
+        whenever(loginCodeService.exchange("code", "")).thenReturn("test-token")
+        mockMvc.perform(post("/auth/login/exchange")
+            .contentType("application/json").content("""{"code":"code"}"""))
+            .andExpect(status().isOk)
     }
 
     @Test
