@@ -177,7 +177,7 @@ class NotificationSchedulerQueryCountTest {
 
             val startTime = System.nanoTime()
 
-            val schedules = scheduleRepository.findByStartDateTimeBetween(todayStart, todayEnd)
+            val schedules = scheduleRepository.findByStartDateTimeBetweenAndDeletedAtIsNull(todayStart, todayEnd)
             for (schedule in schedules) {
                 val spaceId = schedule.sharedSpace.id!!  // LAZY 로딩
                 val subscriptions = pushSubscriptionRepository.findByUserSharedSpaceId(spaceId)

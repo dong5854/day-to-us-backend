@@ -41,13 +41,13 @@ class GoogleCalendarService(
     }
 
     fun updateEvent(userId: Long, googleEventId: String, schedule: Schedule, calendarId: String = "primary") {
-        val calendar = buildCalendarClient(userId) ?: return
+        val calendar = checkNotNull(buildCalendarClient(userId)) { "Google calendar authentication is required" }
         val event = scheduleToGoogleEvent(schedule)
         calendar.events().update(calendarId, googleEventId, event).execute()
     }
 
     fun deleteEvent(userId: Long, googleEventId: String, calendarId: String = "primary") {
-        val calendar = buildCalendarClient(userId) ?: return
+        val calendar = checkNotNull(buildCalendarClient(userId)) { "Google calendar authentication is required" }
         calendar.events().delete(calendarId, googleEventId).execute()
     }
 

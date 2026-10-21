@@ -15,7 +15,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
@@ -46,7 +45,6 @@ class ScheduleServiceTest {
     @Mock
     lateinit var syncSettingRepository: com.dong.daytous.repository.SyncSettingRepository
 
-    @InjectMocks
     lateinit var scheduleService: ScheduleService
 
     private lateinit var sharedSpace: SharedSpace
@@ -56,6 +54,7 @@ class ScheduleServiceTest {
 
     @BeforeEach
     fun setUp() {
+        scheduleService = ScheduleService(scheduleRepository, sharedSpaceRepository, userRepository, googleCalendarService, syncSettingRepository, ScheduleGoogleWriter(googleCalendarService, syncSettingRepository, scheduleRepository))
         sharedSpace = SharedSpace(name = "Test Space").apply { id = spaceId }
         user = User(
             id = 1L,
@@ -137,7 +136,7 @@ class ScheduleServiceTest {
         @Test
         fun `월별 일정을 조회할 수 있다`() {
             val startOfMonth = LocalDateTime.of(LocalDate.of(2024, 3, 1), LocalTime.MIN)
-            val endOfMonth = LocalDateTime.of(YearMonth.of(2024, 3).atEndOfMonth(), LocalTime.MAX)
+            val endOfMonth = LocalDate.of(2024, 4, 1).atStartOfDay()
 
             val schedule = Schedule(
                 title = "데이트",
@@ -149,7 +148,7 @@ class ScheduleServiceTest {
 
             whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
             whenever(
-                scheduleRepository.findBySharedSpaceIdAndStartDateTimeBetweenOrderByStartDateTime(
+                scheduleRepository.findOverlappingMonth(
                     spaceId,
                     startOfMonth,
                     endOfMonth,
@@ -273,7 +272,7 @@ class ScheduleServiceTest {
 
             scheduleService.deleteSchedule(spaceId, scheduleId, email)
 
-            verify(scheduleRepository).delete(schedule)
+            assertThat(schedule.deletedAt).isNotNull()
         }
 
         @Test

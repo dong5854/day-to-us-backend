@@ -10,30 +10,35 @@ import java.util.UUID
 
 @Repository
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
-    // 특정 공간의 특정 기간 내 일정 조회 (시작일 또는 종료일이 기간 내에 포함되는 경우)
-    fun findBySharedSpaceIdAndStartDateTimeBetweenOrderByStartDateTime(
-        sharedSpaceId: UUID,
-        start: LocalDateTime,
-        end: LocalDateTime
+    // Timed events have an exclusive end; all-day events store the last included day.
+    @Query("""
+        SELECT s FROM Schedule s
+        WHERE s.sharedSpace.id = :spaceId AND s.deletedAt IS NULL
+          AND s.startDateTime < :endExclusive
+          AND (s.endDateTime > :start
+            OR (s.isAllDay = true AND s.endDateTime >= :start)
+            OR (s.startDateTime = s.endDateTime AND s.startDateTime >= :start))
+        ORDER BY s.startDateTime
+    """)
+    fun findOverlappingMonth(
+        @Param("spaceId") sharedSpaceId: UUID,
+        @Param("start") start: LocalDateTime,
+        @Param("endExclusive") endExclusive: LocalDateTime,
     ): List<Schedule>
     
-    // 단순히 공간의 모든 일정 조회 (필요 시 사용)
-    fun findBySharedSpaceIdOrderByStartDateTime(sharedSpaceId: UUID): List<Schedule>
-
-    fun findByGoogleEventId(googleEventId: String): Schedule?
-
+    // Include tombstones here so pulls can suppress deleted remote events.
     fun findBySharedSpaceIdAndGoogleEventIdIn(sharedSpaceId: UUID, googleEventIds: List<String>): List<Schedule>
 
-    fun findBySharedSpaceIdAndSyncStatus(sharedSpaceId: UUID, syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
+    fun findBySharedSpaceIdAndSyncStatusAndDeletedAtIsNull(sharedSpaceId: UUID, syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
 
     fun findBySyncStatus(syncStatus: com.dong.daytous.domain.schedule.SyncStatus): List<Schedule>
 
-    fun findByStartDateTimeBetween(start: LocalDateTime, end: LocalDateTime): List<Schedule>
+    fun findByStartDateTimeBetweenAndDeletedAtIsNull(start: LocalDateTime, end: LocalDateTime): List<Schedule>
 
     @Query("""
         SELECT s FROM Schedule s
         JOIN FETCH s.sharedSpace
-        WHERE s.startDateTime BETWEEN :start AND :end
+        WHERE s.startDateTime BETWEEN :start AND :end AND s.deletedAt IS NULL
     """)
     fun findByStartDateTimeBetweenWithSharedSpace(
         @Param("start") start: LocalDateTime,

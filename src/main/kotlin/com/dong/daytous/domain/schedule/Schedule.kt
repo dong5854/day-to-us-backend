@@ -10,6 +10,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import org.hibernate.annotations.UuidGenerator
 import java.time.LocalDateTime
 import java.util.Objects
@@ -19,19 +20,19 @@ import java.util.UUID
 @Table(name = "schedule")
 class Schedule(
     @Column(nullable = false)
-    val title: String,
+    var title: String,
 
     @Column(length = 1000)
-    val description: String? = null,
+    var description: String? = null,
 
     @Column(nullable = false)
-    val startDateTime: LocalDateTime,
+    var startDateTime: LocalDateTime,
 
     @Column(nullable = false)
-    val endDateTime: LocalDateTime,
+    var endDateTime: LocalDateTime,
 
     @Column(nullable = false)
-    val isAllDay: Boolean = false,
+    var isAllDay: Boolean = false,
 
     @Column(nullable = false)
     val createdBy: Long, // User ID
@@ -43,6 +44,14 @@ class Schedule(
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
     var id: UUID? = null
+
+    @Version
+    var version: Long? = null
+
+    // Retain the remote identity after deletion so a later pull cannot recreate it.
+    var deletedAt: LocalDateTime? = null
+    var googleUserId: Long? = null
+    var googleCalendarId: String? = null
 
     @Column(name = "google_event_id")
     var googleEventId: String? = null

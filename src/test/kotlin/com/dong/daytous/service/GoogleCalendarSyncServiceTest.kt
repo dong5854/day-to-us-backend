@@ -20,7 +20,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
@@ -52,7 +51,6 @@ class GoogleCalendarSyncServiceTest {
     @Mock
     lateinit var syncSettingRepository: SyncSettingRepository
 
-    @InjectMocks
     lateinit var syncService: GoogleCalendarSyncService
 
     private lateinit var user: User
@@ -61,6 +59,7 @@ class GoogleCalendarSyncServiceTest {
 
     @BeforeEach
     fun setUp() {
+        syncService = GoogleCalendarSyncService(googleCalendarService, scheduleRepository, userRepository, googleTokenRepository, syncSettingRepository, ScheduleGoogleWriter(googleCalendarService, syncSettingRepository, scheduleRepository))
         sharedSpace = SharedSpace(name = "Test Space").apply { id = spaceId }
         user = User(
             id = 1L,
@@ -144,7 +143,7 @@ class GoogleCalendarSyncServiceTest {
 
             syncService.syncForUser(1L)
 
-            verify(scheduleRepository).delete(schedule)
+            assertThat(schedule.deletedAt).isNotNull()
         }
 
         @Test

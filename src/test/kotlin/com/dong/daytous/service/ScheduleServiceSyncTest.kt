@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
@@ -48,7 +47,6 @@ class ScheduleServiceSyncTest {
     @Mock
     lateinit var syncSettingRepository: SyncSettingRepository
 
-    @InjectMocks
     lateinit var scheduleService: ScheduleService
 
     private lateinit var sharedSpace: SharedSpace
@@ -58,6 +56,7 @@ class ScheduleServiceSyncTest {
 
     @BeforeEach
     fun setUp() {
+        scheduleService = ScheduleService(scheduleRepository, sharedSpaceRepository, userRepository, googleCalendarService, syncSettingRepository, ScheduleGoogleWriter(googleCalendarService, syncSettingRepository, scheduleRepository))
         sharedSpace = SharedSpace(name = "Test Space").apply { id = spaceId }
         user = User(
             id = 1L,
@@ -244,7 +243,7 @@ class ScheduleServiceSyncTest {
             }
 
             whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
-            whenever(scheduleRepository.findBySharedSpaceIdAndSyncStatus(spaceId, SyncStatus.CONFLICT))
+            whenever(scheduleRepository.findBySharedSpaceIdAndSyncStatusAndDeletedAtIsNull(spaceId, SyncStatus.CONFLICT))
                 .thenReturn(listOf(schedule))
 
             val result = scheduleService.getConflicts(spaceId, email)

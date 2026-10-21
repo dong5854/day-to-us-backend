@@ -24,6 +24,7 @@ class GoogleCalendarSyncService(
     private val userRepository: UserRepository,
     private val googleTokenRepository: GoogleTokenRepository,
     private val syncSettingRepository: SyncSettingRepository,
+    private val googleWriter: ScheduleGoogleWriter,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -64,33 +65,53 @@ class GoogleCalendarSyncService(
         val googleEventIds = googleEvents.mapNotNull { it.id }
         val existingSchedules = scheduleRepository
             .findBySharedSpaceIdAndGoogleEventIdIn(spaceId, googleEventIds)
+            .filter { it.googleCalendarId == null || (it.googleCalendarId == calendarId &&
+                (calendarId != "primary" || (it.googleUserId ?: it.createdBy) == userId)) }
             .associateBy { it.googleEventId }
 
         for (event in googleEvents) {
             val eventId = event.id ?: continue
+            val existing = existingSchedules[eventId]
+            if (existing?.deletedAt != null) {
+                // A legacy tombstone has no known origin until a real pull confirms it.
+                if (existing.googleCalendarId == null || existing.googleUserId == null) {
+                    existing.googleCalendarId = calendarId
+                    existing.googleUserId = existing.googleUserId ?: userId
+                    scheduleRepository.save(existing)
+                }
+                continue
+            }
             if (event.status == "cancelled") {
                 handleCancelledEvent(existingSchedules[eventId])
                 continue
             }
 
-            val existing = existingSchedules[eventId]
             if (existing != null) {
-                mergeOrConflict(existing, event)
+                val originChanged = existing.googleUserId == null || existing.googleCalendarId == null
+                existing.googleUserId = existing.googleUserId ?: userId
+                existing.googleCalendarId = existing.googleCalendarId ?: calendarId
+                mergeOrConflict(existing, event, originChanged)
             } else {
-                createScheduleFromGoogleEvent(event, userId, spaceId)
+                createScheduleFromGoogleEvent(event, userId, spaceId, calendarId)
             }
         }
     }
 
     private fun handleCancelledEvent(schedule: Schedule?) {
         if (schedule != null) {
-            scheduleRepository.delete(schedule)
+            schedule.deletedAt = LocalDateTime.now()
+            schedule.syncStatus = SyncStatus.SYNCED
+            scheduleRepository.save(schedule)
             log.info("Deleted schedule {} (Google event cancelled)", schedule.id)
         }
     }
 
-    private fun mergeOrConflict(schedule: Schedule, event: Event) {
-        val googleUpdated = parseGoogleEventUpdated(event) ?: return
+    private fun mergeOrConflict(schedule: Schedule, event: Event, originChanged: Boolean) {
+        val googleUpdated = parseGoogleEventUpdated(event)
+        if (googleUpdated == null) {
+            if (originChanged) scheduleRepository.save(schedule)
+            return
+        }
         val lastSynced = schedule.lastSyncedAt ?: LocalDateTime.MIN
         val (parsedStart, parsedEnd, _) = parseEventTimes(event)
 
@@ -98,6 +119,11 @@ class GoogleCalendarSyncService(
         val googleModifiedSinceSync = googleUpdated.isAfter(lastSynced)
         val localModifiedSinceSync = schedule.lastModifiedAt.isAfter(lastSynced)
 
+        // A pull of unchanged remote data must not overwrite a local edit awaiting retry.
+        if (schedule.syncStatus == SyncStatus.PENDING && !googleModifiedSinceSync) {
+            if (originChanged) scheduleRepository.save(schedule)
+            return
+        }
         if (googleModifiedSinceSync && localModifiedSinceSync) {
             schedule.syncStatus = SyncStatus.CONFLICT
             schedule.googleLastModifiedAt = googleUpdated
@@ -105,6 +131,8 @@ class GoogleCalendarSyncService(
             log.info("Conflict detected for schedule {} (google event {})", schedule.id, event.id)
         } else if (googleModifiedSinceSync || timeMismatch) {
             applyGoogleEventToSchedule(schedule, event, googleUpdated)
+        } else if (originChanged) {
+            scheduleRepository.save(schedule)
         }
     }
 
@@ -115,28 +143,20 @@ class GoogleCalendarSyncService(
     ) {
         val (start, end, allDay) = parseEventTimes(event)
 
-        val updated = Schedule(
-            title = event.summary ?: schedule.title,
-            description = event.description,
-            startDateTime = start,
-            endDateTime = end,
-            isAllDay = allDay,
-            createdBy = schedule.createdBy,
-            sharedSpace = schedule.sharedSpace,
-        ).apply {
-            id = schedule.id
-            googleEventId = schedule.googleEventId
-            syncStatus = SyncStatus.SYNCED
-            lastSyncedAt = LocalDateTime.now()
-            lastModifiedAt = LocalDateTime.now()
-            googleLastModifiedAt = googleUpdated
-        }
-
-        scheduleRepository.save(updated)
+        schedule.title = event.summary ?: schedule.title
+        schedule.description = event.description
+        schedule.startDateTime = start
+        schedule.endDateTime = end
+        schedule.isAllDay = allDay
+        schedule.syncStatus = SyncStatus.SYNCED
+        schedule.lastSyncedAt = LocalDateTime.now()
+        schedule.lastModifiedAt = LocalDateTime.now()
+        schedule.googleLastModifiedAt = googleUpdated
+        scheduleRepository.save(schedule)
         log.debug("Updated schedule {} from Google event {}", schedule.id, event.id)
     }
 
-    private fun createScheduleFromGoogleEvent(event: Event, userId: Long, spaceId: UUID) {
+    private fun createScheduleFromGoogleEvent(event: Event, userId: Long, spaceId: UUID, calendarId: String) {
         val user = userRepository.findById(userId).orElse(null) ?: return
         val sharedSpace = user.sharedSpace ?: return
         if (sharedSpace.id != spaceId) return
@@ -154,6 +174,8 @@ class GoogleCalendarSyncService(
             sharedSpace = sharedSpace,
         ).apply {
             googleEventId = event.id
+            googleUserId = userId
+            googleCalendarId = calendarId
             syncStatus = SyncStatus.SYNCED
             lastSyncedAt = LocalDateTime.now()
             lastModifiedAt = LocalDateTime.now()
@@ -168,27 +190,7 @@ class GoogleCalendarSyncService(
         val pendingSchedules = scheduleRepository.findBySyncStatus(SyncStatus.PENDING)
         for (schedule in pendingSchedules) {
             try {
-                val userId = schedule.createdBy
-                val googleEventId = schedule.googleEventId
-
-                if (googleEventId == null) {
-                    // Never pushed — try to push
-                    val newGoogleEventId = googleCalendarService.pushEvent(userId, schedule)
-                    if (newGoogleEventId != null) {
-                        schedule.googleEventId = newGoogleEventId
-                        schedule.syncStatus = SyncStatus.SYNCED
-                        schedule.lastSyncedAt = LocalDateTime.now()
-                        scheduleRepository.save(schedule)
-                        log.info("Retried push for schedule {} succeeded", schedule.id)
-                    }
-                } else {
-                    // Was pushed before — try to update
-                    googleCalendarService.updateEvent(userId, googleEventId, schedule)
-                    schedule.syncStatus = SyncStatus.SYNCED
-                    schedule.lastSyncedAt = LocalDateTime.now()
-                    scheduleRepository.save(schedule)
-                    log.info("Retried update for schedule {} succeeded", schedule.id)
-                }
+                googleWriter.sync(schedule)
             } catch (e: Exception) {
                 log.warn("Retry sync for schedule {} failed: {}", schedule.id, e.message)
             }
