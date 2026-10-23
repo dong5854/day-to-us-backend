@@ -7,6 +7,7 @@ import java.util.Objects
 import java.util.UUID
 
 @Entity
+@org.hibernate.annotations.DynamicUpdate
 @Table(
     name = "expense_category",
     uniqueConstraints = [
