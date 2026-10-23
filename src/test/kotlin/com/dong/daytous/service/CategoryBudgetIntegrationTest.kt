@@ -23,6 +23,7 @@ import java.util.UUID
 @ActiveProfiles("test")
 @Transactional
 class CategoryBudgetIntegrationTest {
+    @Autowired lateinit var entityManagerFactory: jakarta.persistence.EntityManagerFactory
     @Autowired lateinit var service: ExpenseCategoryService
     @Autowired lateinit var spaces: SharedSpaceRepository
     @Autowired lateinit var users: UserRepository
@@ -96,5 +97,26 @@ class CategoryBudgetIntegrationTest {
         assertThatThrownBy { service.archive(other, first.id, true, otherEmail) }.isInstanceOf(jakarta.persistence.EntityNotFoundException::class.java)
         assertThatThrownBy { service.createCategory(space, ExpenseCategoryRequest(" "), email) }.isInstanceOf(IllegalArgumentException::class.java)
         assertThatThrownBy { service.setBudget(space, first.id, month.toString(), CategoryBudgetRequest(-1), email) }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `순서 편집 도중 변경된 이름을 덮어쓰지 않는다`() {
+        val (space, email) = fixture()
+        val id = service.createCategory(space, ExpenseCategoryRequest("식비"), email).id
+        val manager = entityManagerFactory.createEntityManager()
+        try {
+            manager.transaction.begin()
+            val stale = manager.find(com.dong.daytous.domain.category.ExpenseCategory::class.java, id)
+            service.rename(space, id, ExpenseCategoryRequest("외식"), email)
+            stale.sortOrder = 5
+            manager.transaction.commit()
+            assertThat(service.getAllCategories(space, email).single().name).isEqualTo("외식")
+        } finally {
+            if (manager.transaction.isActive) manager.transaction.rollback()
+            manager.close()
+            service.deleteCategory(space, id, email)
+            users.delete(users.findByEmail(email).orElseThrow())
+            spaces.deleteById(space)
+        }
     }
 }
