@@ -46,6 +46,7 @@ class FixedExpenseService(
                 .orElseThrow { EntityNotFoundException("Category not found or does not belong to this space") }
         }
 
+        require(category?.archived != true) { "보관한 카테고리는 고정 수입·지출에 사용할 수 없습니다." }
         val paymentMethod = request.paymentMethodId?.let {
             paymentMethodRepository.findById(it)
                 .filter { pm -> pm.sharedSpace.id == spaceId }
@@ -110,6 +111,7 @@ class FixedExpenseService(
                 .orElseThrow { EntityNotFoundException("Category not found or does not belong to this space") }
         }
 
+        require(category?.archived != true) { "보관한 카테고리는 고정 수입·지출에 사용할 수 없습니다." }
         val paymentMethod = request.paymentMethodId?.let {
             paymentMethodRepository.findById(it)
                 .filter { pm -> pm.sharedSpace.id == spaceId }

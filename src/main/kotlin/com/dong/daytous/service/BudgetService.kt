@@ -69,6 +69,7 @@ class BudgetService(
             expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
                 ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
         }
+        require(category?.archived != true) { "보관한 카테고리는 새 기록에 사용할 수 없습니다." }
         val paymentMethod = request.paymentMethodId?.let {
             paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
                 ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")
@@ -101,6 +102,7 @@ class BudgetService(
             expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
                 ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
         }
+        require(category?.archived != true || existingEntry.category?.id == category.id) { "보관한 카테고리는 새로 지정할 수 없습니다." }
         val paymentMethod = request.paymentMethodId?.let {
             paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
                 ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")

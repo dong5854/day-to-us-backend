@@ -15,7 +15,13 @@ import java.util.UUID
 )
 class ExpenseCategory(
     @Column(nullable = false)
-    val name: String,
+    var name: String,
+
+    @Column(nullable = false)
+    var sortOrder: Int = 0,
+
+    @Column(nullable = false)
+    var archived: Boolean = false,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shared_space_id", nullable = false)
