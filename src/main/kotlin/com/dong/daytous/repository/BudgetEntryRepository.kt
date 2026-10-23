@@ -9,6 +9,8 @@ import java.util.UUID
 
 @Repository
 interface BudgetEntryRepository : JpaRepository<BudgetEntry, UUID> {
+    fun existsByCategoryId(categoryId: UUID): Boolean
+
     fun findByFixedExpenseId(fixedExpenseId: UUID): List<BudgetEntry>
 
     @Query("SELECT b.fixedExpenseId FROM BudgetEntry b WHERE b.id = :entryId")
