@@ -10,8 +10,10 @@ import java.util.UUID
 @RequestMapping("/shared-spaces/{spaceId}/savings")
 class SavingsController(private val service: SavingsService) {
     @GetMapping
-    fun month(@PathVariable spaceId: UUID, @RequestParam year: Int, @RequestParam month: Int, p: Principal) =
-        service.month(spaceId, year, month, p.name)
+    fun month(@PathVariable spaceId: UUID, @RequestParam year: Int, @RequestParam month: Int, p: Principal, @RequestParam(required = false) group: String? = null) =
+        service.month(spaceId, year, month, p.name, group)
+    @GetMapping("/pension-year")
+    fun pensionYear(@PathVariable spaceId: UUID, @RequestParam year: Int, p: Principal) = service.pensionYear(spaceId, year, p.name)
     @PostMapping
     fun create(@PathVariable spaceId: UUID, @RequestBody r: SavingsPlanRequest, p: Principal) = service.create(spaceId, r, p.name)
     @PutMapping("/{id}")
