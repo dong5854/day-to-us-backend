@@ -19,6 +19,7 @@ class SavingsService(
     private val plans: SavingsPlanRepository,
     private val records: SavingsRecordRepository,
     private val users: UserRepository,
+    private val kisConnections: KisConnectionRepository,
 ) {
     private fun today() = LocalDate.now(ZoneId.of("Asia/Seoul"))
     private fun member(spaceId: UUID, email: String) = users.findByEmail(email).orElseThrow {
@@ -49,6 +50,9 @@ class SavingsService(
         validate(r)
         val payer = member(p.sharedSpace.id!!, r.payerEmail)
         val kind = r.kind ?: p.kind
+        if (p.id != null && kisConnections.existsById(p.id!!)) {
+            require(kind == p.kind && payer.email == p.payerEmail) { "계좌 연결 해제 후 종류나 명의자를 변경해 주세요" }
+        }
         if (p.id != null && (p.kind != SavingsKind.GENERAL || kind != SavingsKind.GENERAL) && p.payerEmail != payer.email) {
             require(records.findByPlanId(p.id!!).isEmpty()) { "기록이 있는 연금 계좌의 명의자는 변경할 수 없습니다" }
         }
@@ -94,7 +98,9 @@ class SavingsService(
     fun archive(spaceId: UUID, id: UUID, email: String) {
         val p = plan(spaceId, id, email)
         if (p.archived) return
+        require(!kisConnections.existsById(id) || p.payerEmail == email) { "연결된 계좌는 명의자 본인만 종료할 수 있습니다" }
         reconcile(p, today(), true)
+        kisConnections.deleteById(p.id!!)
         p.archived = true
     }
 
