@@ -6,6 +6,7 @@ import com.dong.daytous.repository.*
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.dong.daytous.config.PersonalTokenRoutes
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
@@ -30,6 +31,7 @@ class SavingsService(
         member(spaceId, email)
         return (plans.lockById(id) ?: throw EntityNotFoundException("저축을 찾을 수 없습니다"))
             .also { require(it.sharedSpace.id == spaceId) { "다른 공유 공간의 저축입니다" } }
+            .also { PersonalTokenRoutes.requireGeneralSavings(it.kind == SavingsKind.GENERAL) }
     }
     private fun money(value: BigDecimal): Long {
         require(value.stripTrailingZeros().scale() <= 0 && value.abs() <= BigDecimal.valueOf(MAX_AMOUNT)) { "금액은 한도 내 원 단위 정수여야 합니다" }
@@ -50,6 +52,7 @@ class SavingsService(
         validate(r)
         val payer = member(p.sharedSpace.id!!, r.payerEmail)
         val kind = r.kind ?: p.kind
+        PersonalTokenRoutes.requireGeneralSavings(kind == SavingsKind.GENERAL)
         if (p.id != null && kisConnections.existsById(p.id!!)) {
             require(kind == p.kind && payer.email == p.payerEmail) { "계좌 연결 해제 후 종류나 명의자를 변경해 주세요" }
         }

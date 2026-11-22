@@ -1,6 +1,7 @@
 package com.dong.daytous.dto
 
 import com.dong.daytous.domain.savings.SavingsKind
+import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
@@ -30,13 +31,13 @@ data class SavingsRecordRequest(
 data class SavingsPlanResponse(
     val id: UUID, val name: String, val monthlyAmount: Long?, val firstDate: LocalDate?,
     val autoPostFrom: LocalDate?, val maturityDate: LocalDate?, val targetAmount: Long?,
-    val payerEmail: String, val payerName: String, val memo: String, val archived: Boolean,
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY) val payerEmail: String, val payerName: String, val memo: String, val archived: Boolean,
     val version: Long, val balance: Long, val nextDate: LocalDate?,
     val kind: SavingsKind = SavingsKind.GENERAL,
 )
 data class SavingsRecordResponse(
     val id: String, val planId: UUID, val planName: String, val date: LocalDate, val amount: Long,
-    val payerEmail: String, val payerName: String, val memo: String, val automatic: Boolean,
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY) val payerEmail: String, val payerName: String, val memo: String, val automatic: Boolean,
     val planned: Boolean, val version: Long, val confirmed: Boolean = false, val kind: SavingsKind = SavingsKind.GENERAL,
 )
 data class SavingsMonthResponse(

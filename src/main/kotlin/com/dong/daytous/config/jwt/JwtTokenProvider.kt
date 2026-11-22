@@ -41,7 +41,7 @@ class JwtTokenProvider(
         val role = claims["role"] as String
         val authorities = listOf(SimpleGrantedAuthority(role))
 
-        return UsernamePasswordAuthenticationToken(email, null, authorities)
+        return UsernamePasswordAuthenticationToken(email, null, authorities).apply { details = claims.issuedAt?.toInstant() }
     }
 
     fun validateToken(token: String): Boolean {
