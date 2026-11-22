@@ -68,12 +68,8 @@ spec:
 #            timeoutSeconds: 5
 #            successThreshold: 1
 #            failureThreshold: 3
-#        readinessProbe:
-#            httpGet:
-#              path: /
-#              port: 8080
-#            initialDelaySeconds: 45
-#            periodSeconds: 10
-#            timeoutSeconds: 5
-#            successThreshold: 1
-#            failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          periodSeconds: 3
+          timeoutSeconds: 2
