@@ -32,6 +32,7 @@ class SharedSpaceService(
         val newSpace = SharedSpace(name = name)
         val savedSpace = sharedSpaceRepository.save(newSpace)
 
+        userRepository.revokePreviousMembershipTokens(user.id, java.time.Instant.now())
         user.sharedSpace = savedSpace
 
         return savedSpace.toResponse()
@@ -60,6 +61,7 @@ class SharedSpaceService(
             throw IllegalStateException("Shared space is full")
         }
 
+        userRepository.revokePreviousMembershipTokens(user.id, java.time.Instant.now())
         user.sharedSpace = space
 
         return space.toResponse()

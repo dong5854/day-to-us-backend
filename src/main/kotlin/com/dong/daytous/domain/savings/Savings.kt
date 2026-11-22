@@ -6,6 +6,8 @@ import org.hibernate.annotations.UuidGenerator
 import java.time.LocalDate
 import java.util.UUID
 
+enum class SavingsKind { GENERAL, PENSION_SAVINGS, IRP, DC }
+
 @Entity
 @Table(name = "savings_plan")
 class SavingsPlan(
@@ -21,6 +23,7 @@ class SavingsPlan(
     var payerName: String,
     @Column(length = 1000) var memo: String = "",
     var archived: Boolean = false,
+    @Enumerated(EnumType.STRING) @Column(nullable = false) var kind: SavingsKind = SavingsKind.GENERAL,
 ) {
     @Id @UuidGenerator var id: UUID? = null
     @Version var version: Long = 0
@@ -40,6 +43,7 @@ class SavingsRecord(
     @Column(name = "occurrence_month") val occurrenceMonth: LocalDate? = null,
     var edited: Boolean = false,
     var deleted: Boolean = false,
+    var confirmed: Boolean = false,
 ) {
     @Id @UuidGenerator var id: UUID? = null
     @Version var version: Long = 0

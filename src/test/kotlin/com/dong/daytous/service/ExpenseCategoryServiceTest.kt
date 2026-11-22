@@ -39,6 +39,11 @@ class ExpenseCategoryServiceTest {
     @Mock
     lateinit var budgetEntryRepository: com.dong.daytous.repository.BudgetEntryRepository
 
+    @Mock
+    lateinit var fixedExpenseRepository: com.dong.daytous.repository.FixedExpenseRepository
+    @Mock
+    lateinit var categoryBudgetRepository: com.dong.daytous.repository.CategoryBudgetRepository
+
     @InjectMocks
     lateinit var expenseCategoryService: ExpenseCategoryService
 

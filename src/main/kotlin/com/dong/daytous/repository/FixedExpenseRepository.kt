@@ -14,6 +14,10 @@ interface FixedExpenseRepository : JpaRepository<FixedExpense, UUID> {
     @Query("SELECT fe.id FROM FixedExpense fe")
     fun findAllIds(): List<UUID>
 
+    fun existsByIdAndSharedSpaceId(id: UUID, spaceId: UUID): Boolean
+
+    fun existsByCategoryId(categoryId: UUID): Boolean
+
     fun findBySharedSpaceId(sharedSpaceId: UUID): List<FixedExpense>
 
     @Query("SELECT fe FROM FixedExpense fe JOIN FETCH fe.sharedSpace")

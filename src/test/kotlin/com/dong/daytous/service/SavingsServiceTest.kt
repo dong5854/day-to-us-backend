@@ -1,5 +1,6 @@
 package com.dong.daytous.service
 
+import com.dong.daytous.domain.savings.SavingsKind
 import com.dong.daytous.domain.sharedspace.SharedSpace
 import com.dong.daytous.domain.user.Role
 import com.dong.daytous.domain.user.User
@@ -145,4 +146,42 @@ class SavingsServiceTest {
             users.delete(users.findByEmail(email).orElseThrow()); spaces.deleteById(space)
         }
     }
+    @Test fun `연금 분류와 확인한 본인 납입액만 연간 집계한다`() {
+        val (space, email) = fixture()
+        service.create(space, SavingsPlanRequest("일반", payerEmail = email), email)
+        val id = service.create(space, request(email).copy(kind = SavingsKind.PENSION_SAVINGS), email)
+        service.createRecord(space, id, SavingsRecordRequest(today, BigDecimal(100000), email, confirmed = true), email)
+        service.createRecord(space, id, SavingsRecordRequest(today, BigDecimal(200000), email), email)
+        service.createRecord(space, id, SavingsRecordRequest(today.minusYears(1), BigDecimal(300000), email, confirmed = true), email)
+        assertThat(service.month(space, today.year, today.monthValue, email, "general").plans).hasSize(1)
+        assertThat(service.month(space, today.year, today.monthValue, email, "pension").plans.single().kind).isEqualTo(SavingsKind.PENSION_SAVINGS)
+        val annual = service.pensionYear(space, today.year, email).single()
+        assertThat(annual.confirmedDeposits).isEqualTo(100000)
+        assertThat(annual.unconfirmedCount).isGreaterThanOrEqualTo(1)
+        service.archive(space, id, email)
+        assertThat(service.pensionYear(space, today.year, email).single().confirmedDeposits).isEqualTo(100000)
+    }
+
+    @Test fun `연금 인출은 검토 대상으로 표시하고 확인 취소 및 삭제를 반영한다`() {
+        val (space, email) = fixture()
+        val id = service.create(space, SavingsPlanRequest("IRP", payerEmail = email, kind = SavingsKind.IRP), email)
+        service.createRecord(space, id, SavingsRecordRequest(today, BigDecimal(100000), email, confirmed = true), email)
+        val record = records.findByPlanId(id).single()
+        service.updateRecord(space, id, record.id!!, SavingsRecordRequest(today, BigDecimal(100000), email, version = record.version, confirmed = false), email)
+        assertThat(service.pensionYear(space, today.year, email).single().confirmedDeposits).isZero()
+        service.createRecord(space, id, SavingsRecordRequest(today, BigDecimal(-10000), email), email)
+        assertThat(service.pensionYear(space, today.year, email).single().hasWithdrawals).isTrue()
+        service.deleteRecord(space, id, record.id!!, email)
+        assertThat(service.pensionYear(space, today.year, email).single().unconfirmedCount).isEqualTo(1)
+    }
+
+    @Test fun `연금 계좌의 명의자와 다른 납입자 및 다른 공간 조회를 거부한다`() {
+        val (space, email) = fixture()
+        val other = users.save(User(name = "다른 멤버", email = "${UUID.randomUUID()}@test.com", role = Role.USER, provider = "google", providerId = UUID.randomUUID().toString(), sharedSpace = spaces.findById(space).orElseThrow()))
+        val id = service.create(space, SavingsPlanRequest("IRP", payerEmail = email, kind = SavingsKind.IRP), email)
+        assertThatThrownBy { service.createRecord(space, id, SavingsRecordRequest(today, BigDecimal(10000), other.email, confirmed = true), email) }.isInstanceOf(IllegalArgumentException::class.java)
+        val (_, outsider) = fixture()
+        assertThatThrownBy { service.pensionYear(space, today.year, outsider) }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+
 }

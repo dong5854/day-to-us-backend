@@ -45,6 +45,9 @@ class BudgetServiceTest {
     @Mock
     lateinit var paymentMethodRepository: PaymentMethodRepository
 
+    @Mock
+    lateinit var fixedExpenses: com.dong.daytous.repository.FixedExpenseRepository
+
     @InjectMocks
     lateinit var budgetService: BudgetService
 
@@ -194,6 +197,7 @@ class BudgetServiceTest {
         @Test
         fun `고정 지출 ID를 포함하여 생성할 수 있다`() {
             val fixedExpenseId = UUID.randomUUID()
+            whenever(fixedExpenses.existsByIdAndSharedSpaceId(fixedExpenseId, spaceId)).thenReturn(true)
             val request = BudgetEntryRequest(
                 description = "월세",
                 amount = 500000.0,

@@ -3,6 +3,7 @@ package com.dong.daytous.controller
 import com.dong.daytous.dto.*
 import com.dong.daytous.service.SavingsService
 import org.springframework.web.bind.annotation.*
+import com.dong.daytous.config.PersonalTokenRoutes
 import java.security.Principal
 import java.util.UUID
 
@@ -10,8 +11,15 @@ import java.util.UUID
 @RequestMapping("/shared-spaces/{spaceId}/savings")
 class SavingsController(private val service: SavingsService) {
     @GetMapping
-    fun month(@PathVariable spaceId: UUID, @RequestParam year: Int, @RequestParam month: Int, p: Principal) =
-        service.month(spaceId, year, month, p.name)
+    fun month(@PathVariable spaceId: UUID, @RequestParam year: Int, @RequestParam month: Int, p: Principal, @RequestParam(required = false) group: String? = null): SavingsMonthResponse {
+        if (!PersonalTokenRoutes.isPersonalToken()) return service.month(spaceId, year, month, p.name, group)
+        PersonalTokenRoutes.requireGeneralSavings(group == null || group == "general")
+        val result = service.month(spaceId, year, month, p.name, "general")
+        return result.copy(plans = result.plans.map { it.copy(payerEmail = "") },
+            records = result.records.map { it.copy(payerEmail = "") })
+    }
+    @GetMapping("/pension-year")
+    fun pensionYear(@PathVariable spaceId: UUID, @RequestParam year: Int, p: Principal) = service.pensionYear(spaceId, year, p.name)
     @PostMapping
     fun create(@PathVariable spaceId: UUID, @RequestBody r: SavingsPlanRequest, p: Principal) = service.create(spaceId, r, p.name)
     @PutMapping("/{id}")

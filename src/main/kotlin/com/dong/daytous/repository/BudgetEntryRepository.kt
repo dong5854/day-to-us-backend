@@ -9,10 +9,12 @@ import java.util.UUID
 
 @Repository
 interface BudgetEntryRepository : JpaRepository<BudgetEntry, UUID> {
+    fun existsByCategoryId(categoryId: UUID): Boolean
+
     fun findByFixedExpenseId(fixedExpenseId: UUID): List<BudgetEntry>
 
-    @Query("SELECT b.fixedExpenseId FROM BudgetEntry b WHERE b.id = :entryId")
-    fun findFixedExpenseIdById(entryId: UUID): UUID?
+    @Query("SELECT b.fixedExpenseId FROM BudgetEntry b WHERE b.id = :entryId AND b.sharedSpace.id = :spaceId")
+    fun findFixedExpenseId(entryId: UUID, spaceId: UUID): UUID?
 
     fun findBySharedSpaceId(spaceId: UUID): List<BudgetEntry>
 

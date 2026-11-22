@@ -4,5 +4,7 @@ import java.util.UUID
 
 data class ExpenseCategoryResponse(
     val id: UUID,
-    val name: String
+    val name: String,
+    val sortOrder: Int = 0,
+    val archived: Boolean = false
 )

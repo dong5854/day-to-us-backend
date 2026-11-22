@@ -6,6 +6,7 @@ import com.dong.daytous.repository.*
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.dong.daytous.config.PersonalTokenRoutes
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
@@ -19,6 +20,7 @@ class SavingsService(
     private val plans: SavingsPlanRepository,
     private val records: SavingsRecordRepository,
     private val users: UserRepository,
+    private val kisConnections: KisConnectionRepository,
 ) {
     private fun today() = LocalDate.now(ZoneId.of("Asia/Seoul"))
     private fun member(spaceId: UUID, email: String) = users.findByEmail(email).orElseThrow {
@@ -29,6 +31,7 @@ class SavingsService(
         member(spaceId, email)
         return (plans.lockById(id) ?: throw EntityNotFoundException("저축을 찾을 수 없습니다"))
             .also { require(it.sharedSpace.id == spaceId) { "다른 공유 공간의 저축입니다" } }
+            .also { PersonalTokenRoutes.requireGeneralSavings(it.kind == SavingsKind.GENERAL) }
     }
     private fun money(value: BigDecimal): Long {
         require(value.stripTrailingZeros().scale() <= 0 && value.abs() <= BigDecimal.valueOf(MAX_AMOUNT)) { "금액은 한도 내 원 단위 정수여야 합니다" }
@@ -48,6 +51,15 @@ class SavingsService(
     private fun apply(p: SavingsPlan, r: SavingsPlanRequest) {
         validate(r)
         val payer = member(p.sharedSpace.id!!, r.payerEmail)
+        val kind = r.kind ?: p.kind
+        PersonalTokenRoutes.requireGeneralSavings(kind == SavingsKind.GENERAL)
+        if (p.id != null && kisConnections.existsById(p.id!!)) {
+            require(kind == p.kind && payer.email == p.payerEmail) { "계좌 연결 해제 후 종류나 명의자를 변경해 주세요" }
+        }
+        if (p.id != null && (p.kind != SavingsKind.GENERAL || kind != SavingsKind.GENERAL) && p.payerEmail != payer.email) {
+            require(records.findByPlanId(p.id!!).isEmpty()) { "기록이 있는 연금 계좌의 명의자는 변경할 수 없습니다" }
+        }
+        p.kind = kind
         p.name = r.name.trim(); p.monthlyAmount = r.monthlyAmount?.let(::money); p.firstDate = r.firstDate
         p.autoPostFrom = r.autoPostFrom; p.maturityDate = r.maturityDate; p.targetAmount = r.targetAmount?.let(::money)
         p.payerEmail = payer.email; p.payerName = payer.name; p.memo = r.memo.trim()
@@ -71,7 +83,7 @@ class SavingsService(
     }
     private fun token(p: SavingsPlan, r: SavingsPlanRequest): String {
         val history = records.findByPlanId(p.id!!).sortedBy { it.id.toString() }
-            .map { listOf(it.id, it.version, it.date, it.amount, it.edited, it.deleted, it.occurrenceMonth) }
+            .map { listOf(it.id, it.version, it.date, it.amount, it.edited, it.deleted, it.occurrenceMonth, it.confirmed) }
         val snapshot = listOf(p.id, p.version, today(), r.copy(reconciliationToken = null), history).toString()
         return MessageDigest.getInstance("SHA-256").digest(snapshot.toByteArray()).joinToString("") { "%02x".format(it) }
     }
@@ -81,6 +93,7 @@ class SavingsService(
         val copy = SavingsPlan(sharedSpace = original.sharedSpace, name = original.name,
             payerEmail = original.payerEmail, payerName = original.payerName)
         copy.id = original.id
+        copy.kind = original.kind
         apply(copy, r)
         return reconcile(copy, today(), false).copy(token = token(original, r))
     }
@@ -88,7 +101,9 @@ class SavingsService(
     fun archive(spaceId: UUID, id: UUID, email: String) {
         val p = plan(spaceId, id, email)
         if (p.archived) return
+        require(!kisConnections.existsById(id) || p.payerEmail == email) { "연결된 계좌는 명의자 본인만 종료할 수 있습니다" }
         reconcile(p, today(), true)
+        kisConnections.deleteById(p.id!!)
         p.archived = true
     }
 
@@ -137,16 +152,19 @@ class SavingsService(
         val p = plan(spaceId, id, email)
         require(!p.archived) { "종료된 저축에는 기록을 추가할 수 없습니다" }
         recordRequest(spaceId, r)
+        require(p.kind == SavingsKind.GENERAL || r.payerEmail == p.payerEmail) { "연금 납입은 계좌 명의자로 기록하세요" }
         val payer = member(spaceId, r.payerEmail)
-        records.save(SavingsRecord(p, r.date, money(r.amount), payer.email, payer.name, r.memo))
+        records.save(SavingsRecord(p, r.date, money(r.amount), payer.email, payer.name, r.memo, confirmed = r.confirmed))
     }
     fun updateRecord(spaceId: UUID, id: UUID, recordId: UUID, r: SavingsRecordRequest, email: String) {
-        plan(spaceId, id, email)
+        val p = plan(spaceId, id, email)
+        require(p.kind == SavingsKind.GENERAL || r.payerEmail == p.payerEmail) { "연금 납입은 계좌 명의자로 기록하세요" }
         recordRequest(spaceId, r)
         val entry = records.findById(recordId).orElseThrow()
         require(entry.plan.id == id && !entry.deleted)
         require(entry.version == r.version) { "다른 사용자가 수정했습니다. 새로고침 후 다시 시도하세요" }
         val payer = member(spaceId, r.payerEmail)
+        entry.confirmed = r.confirmed
         entry.date = r.date; entry.amount = money(r.amount); entry.memo = r.memo
         entry.payerEmail = payer.email; entry.payerName = payer.name; entry.edited = true
     }
@@ -157,29 +175,45 @@ class SavingsService(
         entry.deleted = true // Keep the occurrence identity so the scheduler cannot recreate it.
     }
     @Transactional(readOnly = true)
-    fun month(spaceId: UUID, year: Int, month: Int, email: String): SavingsMonthResponse {
+    fun month(spaceId: UUID, year: Int, month: Int, email: String, group: String? = null): SavingsMonthResponse {
         member(spaceId, email)
         require(year in 2000..2100 && month in 1..12) { "조회할 월을 확인하세요" }
         val ym = YearMonth.of(year, month)
         val cutoff = minOf(today(), ym.atEndOfMonth())
-        val allPlans = plans.findBySharedSpaceId(spaceId)
-        val all = records.findForSpace(spaceId)
+        require(group == null || group in setOf("general", "pension")) { "조회할 분류를 확인하세요" }
+        val allPlans = plans.findBySharedSpaceId(spaceId).filter {
+            when (group) { "general" -> it.kind == SavingsKind.GENERAL; "pension" -> it.kind != SavingsKind.GENERAL; else -> true }
+        }
+        val ids = allPlans.map { it.id }.toSet()
+        val all = records.findForSpace(spaceId).filter { it.plan.id in ids }
         val visible = all.filter { !it.deleted }
         val monthly = visible.filter { YearMonth.from(it.date) == ym }
         val actual = monthly.map { SavingsRecordResponse(it.id.toString(), it.plan.id!!, it.plan.name,
-            it.date, it.amount, it.payerEmail, it.payerName, it.memo, it.occurrenceMonth != null, false, it.version) }
+            it.date, it.amount, it.payerEmail, it.payerName, it.memo, it.occurrenceMonth != null, false, it.version, it.confirmed, it.plan.kind) }
         val planned = allPlans.flatMap { p ->
             val tracked = all.filter { it.plan.id == p.id }.mapNotNull { it.occurrenceMonth }.toSet()
             dates(p, ym.atEndOfMonth()).filter { (key, date) -> date > today() && YearMonth.from(date) == ym && key !in tracked }
                 .map { (key, date) -> SavingsRecordResponse("${p.id}:$key", p.id!!, p.name, date,
-                    p.monthlyAmount!!, p.payerEmail, p.payerName, "", true, true, 0) }
+                    p.monthlyAmount!!, p.payerEmail, p.payerName, "", true, true, 0, kind = p.kind) }
         }
         val balances = visible.filter { it.date <= cutoff }.groupBy { it.plan.id }.mapValues { (_, list) -> list.sumOf { it.amount } }
         return SavingsMonthResponse(allPlans.map { p -> SavingsPlanResponse(p.id!!, p.name, p.monthlyAmount,
             p.firstDate, p.autoPostFrom, p.maturityDate, p.targetAmount, p.payerEmail, p.payerName,
             p.memo, p.archived, p.version, balances[p.id] ?: 0,
-            dates(p, maxOf(today(), p.firstDate ?: today(), p.autoPostFrom ?: today()).plusMonths(1)).values.firstOrNull { it > today() }) }, (actual + planned).sortedBy { it.date }, cutoff,
+            dates(p, maxOf(today(), p.firstDate ?: today(), p.autoPostFrom ?: today()).plusMonths(1)).values.firstOrNull { it > today() }, p.kind) }, (actual + planned).sortedBy { it.date }, cutoff,
             monthly.filter { it.amount > 0 }.sumOf { it.amount }, -monthly.filter { it.amount < 0 }.sumOf { it.amount }, balances.values.sum())
+    }
+    @Transactional(readOnly = true)
+    fun pensionYear(spaceId: UUID, year: Int, email: String): List<PensionAccountSummary> {
+        member(spaceId, email)
+        require(year in 2000..2100) { "조회할 연도를 확인하세요" }
+        val entries = records.findForSpace(spaceId).filter { !it.deleted && it.date.year == year && it.date <= today() }.groupBy { it.plan.id }
+        return plans.findBySharedSpaceId(spaceId).filter { it.kind != SavingsKind.GENERAL }.map { p ->
+            val history = entries[p.id].orEmpty()
+            PensionAccountSummary(p.id!!, p.payerEmail, p.kind,
+                history.filter { it.confirmed && it.amount > 0 && it.payerEmail == p.payerEmail }.sumOf { it.amount },
+                history.count { !it.confirmed || it.payerEmail != p.payerEmail }, history.any { it.amount < 0 })
+        }
     }
     companion object { const val MAX_AMOUNT = 1_000_000_000_000L }
 }
