@@ -137,10 +137,11 @@ class ExpenseCategoryService(
         val months = (5L downTo 0L).map { month.minusMonths(it) }
         val entries = budgetEntryRepository.findBySharedSpaceIdAndDateBetween(spaceId, months.first().atDay(1), month.atEndOfMonth())
             .filter { it.amount < 0 }
-        val totals = entries.groupBy { it.category?.id to java.time.YearMonth.from(it.date) }
-            .mapValues { (_, records) -> records.fold(java.math.BigDecimal.ZERO) { sum, entry -> sum + java.math.BigDecimal.valueOf(-entry.amount) } }
+        val totals = entries.groupingBy { it.category?.id to java.time.YearMonth.from(it.date) }
+            .fold(java.math.BigDecimal.ZERO) { sum, entry -> sum + java.math.BigDecimal.valueOf(-entry.amount) }
         val rules = categoryBudgetRepository.findByCategorySharedSpaceId(spaceId).groupBy { it.category.id }
         val fixed = fixedExpenseRepository.findBySharedSpaceId(spaceId).groupBy { it.category?.id }
+        val usedCategoryIds = budgetEntryRepository.findUsedCategoryIds(spaceId)
         val rows = (sortedCategories(spaceId) + listOf(null)).map { category ->
             val id = category?.id
             val history = months.map { m ->
@@ -150,7 +151,7 @@ class ExpenseCategoryService(
                 com.dong.daytous.dto.CategoryMonthTotal(m.toString(), totals[id to m] ?: java.math.BigDecimal.ZERO, if (override != null) override.amount else recurring?.amount)
             }
             com.dong.daytous.dto.CategoryOverviewRow(category?.toResponse(), history,
-                id != null && (budgetEntryRepository.existsByCategoryId(id) || rules[id].orEmpty().isNotEmpty()),
+                id != null && (id in usedCategoryIds || id in rules),
                 fixed[id].orEmpty().mapNotNull { it.id })
         }
         return com.dong.daytous.dto.CategoryOverview(monthValue, rows.fold(java.math.BigDecimal.ZERO) { total, row -> total + row.history.last().spent }, rows)

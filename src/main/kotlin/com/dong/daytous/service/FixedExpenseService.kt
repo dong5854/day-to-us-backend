@@ -40,18 +40,9 @@ class FixedExpenseService(
                 .findById(spaceId)
                 .orElseThrow { EntityNotFoundException("SharedSpace with id $spaceId not found") }
 
-        val category = request.categoryId?.let {
-            expenseCategoryRepository.findById(it)
-                .filter { cat -> cat.sharedSpace.id == spaceId }
-                .orElseThrow { EntityNotFoundException("Category not found or does not belong to this space") }
-        }
+        val category = findCategory(spaceId, request.categoryId)
 
-        require(category?.archived != true) { "보관한 카테고리는 고정 수입·지출에 사용할 수 없습니다." }
-        val paymentMethod = request.paymentMethodId?.let {
-            paymentMethodRepository.findById(it)
-                .filter { pm -> pm.sharedSpace.id == spaceId }
-                .orElseThrow { EntityNotFoundException("PaymentMethod not found or does not belong to this space") }
-        }
+        val paymentMethod = findPaymentMethod(spaceId, request.paymentMethodId)
 
         val newExpense =
             FixedExpense(
@@ -105,18 +96,9 @@ class FixedExpenseService(
                 .filter { it.sharedSpace.id == spaceId }
                 .orElseThrow { EntityNotFoundException("FixedExpense with id $expenseId not found") }
 
-        val category = request.categoryId?.let {
-            expenseCategoryRepository.findById(it)
-                .filter { cat -> cat.sharedSpace.id == spaceId }
-                .orElseThrow { EntityNotFoundException("Category not found or does not belong to this space") }
-        }
+        val category = findCategory(spaceId, request.categoryId)
 
-        require(category?.archived != true) { "보관한 카테고리는 고정 수입·지출에 사용할 수 없습니다." }
-        val paymentMethod = request.paymentMethodId?.let {
-            paymentMethodRepository.findById(it)
-                .filter { pm -> pm.sharedSpace.id == spaceId }
-                .orElseThrow { EntityNotFoundException("PaymentMethod not found or does not belong to this space") }
-        }
+        val paymentMethod = findPaymentMethod(spaceId, request.paymentMethodId)
 
         val scheduleChanged = expense.startDate != request.startDate || expense.frequency != request.frequency
         if (scheduleChanged) recurringBudgetService.lockAndTrack(expenseId)
@@ -158,6 +140,20 @@ class FixedExpenseService(
                 .orElseThrow { EntityNotFoundException("FixedExpense with id $expenseId not found") }
 
         fixedExpenseRepository.delete(expense)
+    }
+
+    private fun findCategory(spaceId: UUID, id: UUID?) = id?.let {
+        expenseCategoryRepository.findById(it)
+            .filter { cat -> cat.sharedSpace.id == spaceId }
+            .orElseThrow { EntityNotFoundException("Category not found or does not belong to this space") }
+    }.also { category ->
+        require(category?.archived != true) { "보관한 카테고리는 고정 수입·지출에 사용할 수 없습니다." }
+    }
+
+    private fun findPaymentMethod(spaceId: UUID, id: UUID?) = id?.let {
+        paymentMethodRepository.findById(it)
+            .filter { pm -> pm.sharedSpace.id == spaceId }
+            .orElseThrow { EntityNotFoundException("PaymentMethod not found or does not belong to this space") }
     }
 
     private fun checkAccess(

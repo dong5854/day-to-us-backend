@@ -92,11 +92,7 @@ class ScheduleService(
     ): ScheduleResponse {
         checkAccessAndGetUser(spaceId, email)
 
-        val schedule =
-            scheduleRepository
-                .findByIdOrNull(scheduleId)
-                ?.takeIf { it.sharedSpace.id == spaceId && it.deletedAt == null }
-                ?: throw EntityNotFoundException("Schedule not found")
+        val schedule = activeSchedule(spaceId, scheduleId)
 
         return schedule.toResponse()
     }
@@ -110,11 +106,7 @@ class ScheduleService(
     ): ScheduleResponse {
         checkAccessAndGetUser(spaceId, email)
 
-        val schedule =
-            scheduleRepository
-                .findByIdOrNull(scheduleId)
-                ?.takeIf { it.sharedSpace.id == spaceId && it.deletedAt == null }
-                ?: throw EntityNotFoundException("Schedule not found")
+        val schedule = activeSchedule(spaceId, scheduleId)
 
         schedule.title = request.title
         schedule.description = request.description
@@ -137,11 +129,7 @@ class ScheduleService(
     ) {
         checkAccessAndGetUser(spaceId, email)
 
-        val schedule =
-            scheduleRepository
-                .findByIdOrNull(scheduleId)
-                ?.takeIf { it.sharedSpace.id == spaceId && it.deletedAt == null }
-                ?: throw EntityNotFoundException("Schedule not found")
+        val schedule = activeSchedule(spaceId, scheduleId)
 
         schedule.deletedAt = LocalDateTime.now()
         schedule.syncStatus = SyncStatus.PENDING
@@ -158,11 +146,7 @@ class ScheduleService(
     ): ScheduleResponse {
         checkAccessAndGetUser(spaceId, email)
 
-        val schedule =
-            scheduleRepository
-                .findByIdOrNull(scheduleId)
-                ?.takeIf { it.sharedSpace.id == spaceId && it.deletedAt == null }
-                ?: throw EntityNotFoundException("Schedule not found")
+        val schedule = activeSchedule(spaceId, scheduleId)
 
         if (schedule.syncStatus != SyncStatus.CONFLICT) {
             throw IllegalStateException("Schedule is not in CONFLICT state")
@@ -186,19 +170,12 @@ class ScheduleService(
                 val googleEvent = events.find { it.id == googleEventId }
                     ?: throw IllegalStateException("Google event not found: $googleEventId")
 
-                val startMillis = googleEvent.start?.dateTime?.value
-                    ?: googleEvent.start?.date?.value ?: 0L
-                val endMillis = googleEvent.end?.dateTime?.value
-                    ?: googleEvent.end?.date?.value ?: 0L
-                val zoneId = java.time.ZoneId.systemDefault()
-                val start = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(startMillis), zoneId)
-                val end = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(endMillis), zoneId)
-                val allDay = googleEvent.start?.date != null
+                val (start, end, allDay) = parseEventTimes(googleEvent)
 
                 schedule.title = googleEvent.summary ?: schedule.title
                 schedule.description = googleEvent.description
                 schedule.startDateTime = start
-                schedule.endDateTime = if (allDay) end.minusDays(1) else end
+                schedule.endDateTime = end
                 schedule.isAllDay = allDay
                 schedule.syncStatus = SyncStatus.SYNCED
                 schedule.lastSyncedAt = LocalDateTime.now()
@@ -241,4 +218,9 @@ class ScheduleService(
         }
         return user
     }
+
+    private fun activeSchedule(spaceId: UUID, scheduleId: UUID): Schedule =
+        scheduleRepository.findByIdOrNull(scheduleId)
+            ?.takeIf { it.sharedSpace.id == spaceId && it.deletedAt == null }
+            ?: throw EntityNotFoundException("Schedule not found")
 }

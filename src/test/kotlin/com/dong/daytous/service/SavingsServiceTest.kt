@@ -37,6 +37,23 @@ class SavingsServiceTest {
     private fun request(email: String) = SavingsPlanRequest("적금", BigDecimal(50000),
         today.minusMonths(2).withDayOfMonth(1), today.minusMonths(2).withDayOfMonth(1), payerEmail = email)
 
+    @Test fun `삭제한 회차는 같은 달의 다른 계획 예정에 영향을 주지 않는다`() {
+        val (space, email) = fixture()
+        val next = today.plusMonths(1).withDayOfMonth(1)
+        val request = request(email).copy(firstDate = next, autoPostFrom = next)
+        val first = service.create(space, request, email)
+        val second = service.create(space, request.copy(name = "두 번째 적금"), email)
+        service.postDue(first, next)
+        service.deleteRecord(space, first, records.findByPlanId(first).single().id!!, email)
+
+        val month = service.month(space, next.year, next.monthValue, email)
+        assertThat(month.records.single().id).isEqualTo("$second:$next")
+        assertThat(month.records.single().planned).isTrue()
+        assertThat(month.deposits).isZero()
+        assertThat(month.withdrawals).isZero()
+        assertThat(month.balance).isZero()
+    }
+
     @Test fun `등록 즉시 지난 회차가 한번씩 생성되고 가계부 합계와 분리된다`() {
         val (space, email) = fixture()
         val id = service.create(space, request(email), email)

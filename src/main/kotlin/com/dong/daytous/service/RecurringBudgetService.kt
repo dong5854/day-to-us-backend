@@ -1,5 +1,6 @@
 package com.dong.daytous.service
 
+import com.dong.daytous.domain.fixedexpense.calculateNextPaymentDate
 import com.dong.daytous.domain.budget.BudgetEntry
 import com.dong.daytous.domain.fixedexpense.FixedExpense
 import com.dong.daytous.domain.fixedexpense.FixedTransactionType
@@ -60,10 +61,10 @@ class RecurringBudgetService(
 
     private fun dueDates(source: FixedExpense, from: LocalDate, through: LocalDate): Set<LocalDate> {
         val dates = linkedSetOf<LocalDate>()
-        var due = NotificationScheduler.calculateNextPaymentDate(source, from)
+        var due = calculateNextPaymentDate(source, from)
         while (due <= through) {
             dates.add(due)
-            due = NotificationScheduler.calculateNextPaymentDate(source, due.plusDays(1))
+            due = calculateNextPaymentDate(source, due.plusDays(1))
         }
         return dates
     }

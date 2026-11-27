@@ -190,9 +190,11 @@ class SavingsService(
         val monthly = visible.filter { YearMonth.from(it.date) == ym }
         val actual = monthly.map { SavingsRecordResponse(it.id.toString(), it.plan.id!!, it.plan.name,
             it.date, it.amount, it.payerEmail, it.payerName, it.memo, it.occurrenceMonth != null, false, it.version, it.confirmed, it.plan.kind) }
+        val trackedOccurrences = all.mapNotNull { record ->
+            record.occurrenceMonth?.let { month -> record.plan.id to month }
+        }.toHashSet()
         val planned = allPlans.flatMap { p ->
-            val tracked = all.filter { it.plan.id == p.id }.mapNotNull { it.occurrenceMonth }.toSet()
-            dates(p, ym.atEndOfMonth()).filter { (key, date) -> date > today() && YearMonth.from(date) == ym && key !in tracked }
+            dates(p, ym.atEndOfMonth()).filter { (key, date) -> date > today() && YearMonth.from(date) == ym && (p.id to key) !in trackedOccurrences }
                 .map { (key, date) -> SavingsRecordResponse("${p.id}:$key", p.id!!, p.name, date,
                     p.monthlyAmount!!, p.payerEmail, p.payerName, "", true, true, 0, kind = p.kind) }
         }

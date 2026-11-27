@@ -81,6 +81,22 @@ class CategoryBudgetIntegrationTest {
         assertThat(service.getAllCategories(space, email)).hasSize(1)
     }
 
+    @Test fun `집계 기간 전 수입과 예산만 있는 카테고리도 사용 이력에 포함한다`() {
+        val (space, email) = fixture()
+        val sharedSpace = spaces.findById(space).orElseThrow()
+        val income = service.createCategory(space, ExpenseCategoryRequest("급여"), email).id
+        val rule = service.createCategory(space, ExpenseCategoryRequest("식비"), email).id
+        val unused = service.createCategory(space, ExpenseCategoryRequest("여가"), email).id
+        entries.save(BudgetEntry("과거 급여", 100.0, category = categories.getReferenceById(income),
+            date = month.minusMonths(7).atDay(1), sharedSpace = sharedSpace))
+        service.setBudget(space, rule, month.toString(), CategoryBudgetRequest(0), email)
+
+        val overview = service.overview(space, month.toString(), email)
+        val used = overview.rows.associate { it.category?.id to it.used }
+        assertThat(used).isEqualTo(mapOf(income to true, rule to true, unused to false, null to false))
+        assertThat(overview.totalSpent).isEqualByComparingTo("0")
+    }
+
     @Test fun `순서와 이름은 공간 단위로 관리하고 다른 공간의 조회와 변경을 차단한다`() {
         val (space, email) = fixture()
         val first = service.createCategory(space, ExpenseCategoryRequest(" 식비 "), email)

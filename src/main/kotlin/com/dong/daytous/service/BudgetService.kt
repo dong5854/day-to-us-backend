@@ -67,15 +67,9 @@ class BudgetService(
             .findById(spaceId)
             .orElseThrow { EntityNotFoundException("SharedSpace with id $spaceId not found") }
 
-        val category = request.categoryId?.let {
-            expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
-                ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
-        }
+        val category = findCategory(spaceId, request.categoryId)
         require(category?.archived != true) { "보관한 카테고리는 새 기록에 사용할 수 없습니다." }
-        val paymentMethod = request.paymentMethodId?.let {
-            paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
-                ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")
-        }
+        val paymentMethod = findPaymentMethod(spaceId, request.paymentMethodId)
 
         val newEntry = BudgetEntry(
             description = request.description,
@@ -100,15 +94,9 @@ class BudgetService(
         budgetEntryRepository.findFixedExpenseId(entryId, spaceId)?.let { recurringBudgetService.lockAndTrack(it) }
         val existingEntry = getBudgetEntryById(spaceId, entryId, email)
 
-        val category = request.categoryId?.let {
-            expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
-                ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
-        }
+        val category = findCategory(spaceId, request.categoryId)
         require(category?.archived != true || existingEntry.category?.id == category.id) { "보관한 카테고리는 새로 지정할 수 없습니다." }
-        val paymentMethod = request.paymentMethodId?.let {
-            paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
-                ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")
-        }
+        val paymentMethod = findPaymentMethod(spaceId, request.paymentMethodId)
 
         val updatedEntry = existingEntry.copy(
             description = request.description,
@@ -138,6 +126,16 @@ class BudgetService(
 
     private fun checkedExpense(spaceId: UUID, id: UUID?) = id?.also {
         if (!fixedExpenses.existsByIdAndSharedSpaceId(it, spaceId)) throw EntityNotFoundException("고정지출을 찾을 수 없습니다")
+    }
+
+    private fun findCategory(spaceId: UUID, id: UUID?) = id?.let {
+        expenseCategoryRepository.findByIdAndSharedSpaceId(it, spaceId)
+            ?: throw EntityNotFoundException("ExpenseCategory with id $it not found in space $spaceId")
+    }
+
+    private fun findPaymentMethod(spaceId: UUID, id: UUID?) = id?.let {
+        paymentMethodRepository.findByIdAndSharedSpaceId(it, spaceId)
+            ?: throw EntityNotFoundException("PaymentMethod with id $it not found in space $spaceId")
     }
 
     private fun checkAccess(

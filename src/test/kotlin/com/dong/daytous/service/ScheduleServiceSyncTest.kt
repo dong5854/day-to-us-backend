@@ -12,6 +12,11 @@ import com.dong.daytous.repository.ScheduleRepository
 import com.dong.daytous.repository.SharedSpaceRepository
 import com.dong.daytous.repository.SyncSettingRepository
 import com.dong.daytous.repository.UserRepository
+import com.google.api.client.util.DateTime
+import com.google.api.services.calendar.model.Event
+import com.google.api.services.calendar.model.EventDateTime
+import java.time.ZoneId
+import java.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -199,6 +204,36 @@ class ScheduleServiceSyncTest {
                 )
             }.isInstanceOf(IllegalStateException::class.java)
                 .hasMessageContaining("not in CONFLICT state")
+        }
+
+        @Test
+        fun `Google 종일 일정을 선택하면 종료일을 포함하는 기간으로 저장한다`() {
+            val scheduleId = UUID.randomUUID()
+            val date = LocalDateTime.of(2026, 2, 1, 0, 0)
+            val schedule = Schedule(title = "여행", startDateTime = date, endDateTime = date,
+                createdBy = 1L, sharedSpace = sharedSpace).apply {
+                id = scheduleId
+                googleEventId = "trip"
+                googleCalendarId = "primary"
+                syncStatus = SyncStatus.CONFLICT
+            }
+            val start = DateTime("2026-02-01")
+            val end = DateTime("2026-02-04")
+            val event = Event().setId("trip").setStart(EventDateTime().setDate(start))
+                .setEnd(EventDateTime().setDate(end))
+            whenever(userRepository.findByEmail(email)).thenReturn(Optional.of(user))
+            whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+            whenever(googleCalendarService.pullEvents(1L, date.minusDays(1), date.plusDays(1), "primary"))
+                .thenReturn(listOf(event))
+            whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+
+            val result = scheduleService.resolveConflict(spaceId, scheduleId,
+                com.dong.daytous.service.ConflictResolution.KEEP_GOOGLE, email)
+            val zone = ZoneId.systemDefault()
+            assertThat(result.startDateTime).isEqualTo(LocalDateTime.ofInstant(Instant.ofEpochMilli(start.value), zone))
+            assertThat(result.endDateTime).isEqualTo(LocalDateTime.ofInstant(Instant.ofEpochMilli(end.value), zone).minusDays(1))
+            assertThat(result.isAllDay).isTrue()
+            assertThat(result.syncStatus).isEqualTo("SYNCED")
         }
 
         @Test

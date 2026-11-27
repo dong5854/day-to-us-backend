@@ -1,5 +1,6 @@
 package com.dong.daytous.service
 
+import com.dong.daytous.domain.fixedexpense.calculateNextPaymentDate
 import com.dong.daytous.domain.fixedexpense.FixedExpense
 import com.dong.daytous.domain.fixedexpense.Frequency
 import com.dong.daytous.domain.push.PushSubscription
@@ -85,7 +86,7 @@ class NotificationSchedulerTest {
             )
             val today = LocalDate.of(2026, 3, 15)
 
-            val result = NotificationScheduler.calculateNextPaymentDate(expense, today)
+            val result = calculateNextPaymentDate(expense, today)
 
             assertThat(result).isEqualTo(LocalDate.of(2026, 3, 15))
         }
@@ -101,7 +102,7 @@ class NotificationSchedulerTest {
             )
             val today = LocalDate.of(2026, 3, 15)
 
-            val result = NotificationScheduler.calculateNextPaymentDate(expense, today)
+            val result = calculateNextPaymentDate(expense, today)
 
             assertThat(result).isEqualTo(LocalDate.of(2026, 3, 15))
         }
@@ -117,7 +118,7 @@ class NotificationSchedulerTest {
             )
             val today = LocalDate.of(2026, 3, 15)
 
-            val result = NotificationScheduler.calculateNextPaymentDate(expense, today)
+            val result = calculateNextPaymentDate(expense, today)
 
             assertThat(result).isEqualTo(LocalDate.of(2026, 6, 1))
         }
@@ -133,7 +134,7 @@ class NotificationSchedulerTest {
             )
             val today = LocalDate.of(2026, 3, 15)
 
-            val result = NotificationScheduler.calculateNextPaymentDate(expense, today)
+            val result = calculateNextPaymentDate(expense, today)
 
             assertThat(result).isEqualTo(LocalDate.of(2026, 4, 1))
         }
@@ -149,7 +150,7 @@ class NotificationSchedulerTest {
                 sharedSpace = sharedSpace,
             )
 
-            val result = NotificationScheduler.calculateNextPaymentDate(expense, today)
+            val result = calculateNextPaymentDate(expense, today)
 
             assertThat(result).isEqualTo(today)
         }
@@ -165,9 +166,9 @@ class NotificationSchedulerTest {
             sharedSpace = sharedSpace,
         )
 
-        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2026, 3, 28)))
+        assertThat(calculateNextPaymentDate(expense, LocalDate.of(2026, 3, 28)))
             .isEqualTo(LocalDate.of(2026, 3, 31))
-        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2026, 2, 28)))
+        assertThat(calculateNextPaymentDate(expense, LocalDate.of(2026, 2, 28)))
             .isEqualTo(LocalDate.of(2026, 2, 28))
     }
 
@@ -181,9 +182,9 @@ class NotificationSchedulerTest {
             sharedSpace = sharedSpace,
         )
 
-        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2024, 2, 28)))
+        assertThat(calculateNextPaymentDate(expense, LocalDate.of(2024, 2, 28)))
             .isEqualTo(LocalDate.of(2024, 2, 29))
-        assertThat(NotificationScheduler.calculateNextPaymentDate(expense, LocalDate.of(2025, 2, 28)))
+        assertThat(calculateNextPaymentDate(expense, LocalDate.of(2025, 2, 28)))
             .isEqualTo(LocalDate.of(2025, 2, 28))
     }
 

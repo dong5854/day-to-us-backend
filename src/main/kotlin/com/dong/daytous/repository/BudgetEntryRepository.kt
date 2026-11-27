@@ -11,6 +11,9 @@ import java.util.UUID
 interface BudgetEntryRepository : JpaRepository<BudgetEntry, UUID> {
     fun existsByCategoryId(categoryId: UUID): Boolean
 
+    @Query("SELECT DISTINCT b.category.id FROM BudgetEntry b WHERE b.category.sharedSpace.id = :spaceId")
+    fun findUsedCategoryIds(spaceId: UUID): Set<UUID>
+
     fun findByFixedExpenseId(fixedExpenseId: UUID): List<BudgetEntry>
 
     @Query("SELECT b.fixedExpenseId FROM BudgetEntry b WHERE b.id = :entryId AND b.sharedSpace.id = :spaceId")
